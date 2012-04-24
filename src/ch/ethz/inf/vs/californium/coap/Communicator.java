@@ -34,9 +34,10 @@ import java.io.IOException;
 import java.net.SocketException;
 
 import ch.ethz.inf.vs.californium.layers.AdverseLayer;
+import ch.ethz.inf.vs.californium.layers.MatchingLayer;
+import ch.ethz.inf.vs.californium.layers.RateControlLayer;
 import ch.ethz.inf.vs.californium.layers.TokenLayer;
 import ch.ethz.inf.vs.californium.layers.TransactionLayer;
-import ch.ethz.inf.vs.californium.layers.MatchingLayer;
 import ch.ethz.inf.vs.californium.layers.TransferLayer;
 import ch.ethz.inf.vs.californium.layers.UDPLayer;
 import ch.ethz.inf.vs.californium.layers.UpperLayer;
@@ -61,24 +62,26 @@ import ch.ethz.inf.vs.californium.layers.UpperLayer;
  */
 public class Communicator extends UpperLayer {
 	
-// Static Attributes ///////////////////////////////////////////////////////////
+	// Static Attributes ///////////////////////////////////////////////////////////
 	
 	private volatile static Communicator singleton = null;
 	private static int udpPort = 0;
 	private static boolean runAsDaemon = true; // JVM will shut down if no user threads are running
 	private static int transferBlockSize = 0;
-
-// Members /////////////////////////////////////////////////////////////////////
-
+	private static int requestPerSecond = 10;
+	
+	// Members /////////////////////////////////////////////////////////////////////
+	
 	protected TokenLayer tokenLayer;
 	protected TransferLayer transferLayer;
 	protected MatchingLayer matchingLayer;
 	protected TransactionLayer transactionLayer;
 	protected AdverseLayer adverseLayer;
 	protected UDPLayer udpLayer;
+	protected RateControlLayer rateControlLayer;
 	
-// Constructors ////////////////////////////////////////////////////////////////
-
+	// Constructors ////////////////////////////////////////////////////////////////
+	
 	/*
 	 * Constructor for a new Communicator
 	 * 
@@ -86,17 +89,18 @@ public class Communicator extends UpperLayer {
 	 * @param daemon True if receiver thread should terminate with main thread
 	 * @param defaultBlockSize The default block size used for block-wise transfers
 	 *        or -1 to disable outgoing block-wise transfers
-	 */	
+	 */
 	private Communicator() throws SocketException {
 		
 		// initialize layers
-		tokenLayer = new TokenLayer();
-		transferLayer = new TransferLayer(transferBlockSize);
-		matchingLayer = new MatchingLayer();
-		transactionLayer = new TransactionLayer();
-		adverseLayer = new AdverseLayer();
-		udpLayer = new UDPLayer(udpPort, runAsDaemon);
-
+		this.rateControlLayer = new RateControlLayer(requestPerSecond);
+		this.tokenLayer = new TokenLayer();
+		this.transferLayer = new TransferLayer(transferBlockSize);
+		this.matchingLayer = new MatchingLayer();
+		this.transactionLayer = new TransactionLayer();
+		this.adverseLayer = new AdverseLayer();
+		this.udpLayer = new UDPLayer(udpPort, runAsDaemon);
+		
 		// connect layers
 		buildStack();
 		
@@ -120,10 +124,10 @@ public class Communicator extends UpperLayer {
 	}
 	
 	public static void setupPort(int port) {
-		if (port!=udpPort && singleton==null) {
+		if ((port!=udpPort) && (singleton==null)) {
 			synchronized (Communicator.class) {
 				if (singleton==null) {
-
+					
 					udpPort = port;
 					LOG.config(String.format("Custom port: %d", udpPort));
 					
@@ -133,8 +137,25 @@ public class Communicator extends UpperLayer {
 			}
 		}
 	}
+	
+	public static void setupRequestPerSecond(int requestPerSecond) {
+		if ((requestPerSecond != Communicator.requestPerSecond)
+				&& (singleton == null)) {
+			synchronized (Communicator.class) {
+				if (singleton == null) {
+					
+					Communicator.requestPerSecond = requestPerSecond;
+					LOG.config(String.format("Request per second: %d",
+							requestPerSecond));
+				} else {
+					LOG.severe("Communicator already initialized, setup failed");
+				}
+			}
+		}
+	}
+	
 	public static void setupTransfer(int defaultBlockSize) {
-		if (defaultBlockSize!=transferBlockSize && singleton==null) {
+		if ((defaultBlockSize!=transferBlockSize) && (singleton==null)) {
 			synchronized (Communicator.class) {
 				if (singleton==null) {
 					
@@ -148,7 +169,7 @@ public class Communicator extends UpperLayer {
 		}
 	}
 	public static void setupDeamon(boolean daemon) {
-		if (daemon!=runAsDaemon && singleton==null) {
+		if ((daemon!=runAsDaemon) && (singleton==null)) {
 			synchronized (Communicator.class) {
 				if (singleton==null) {
 					
@@ -161,9 +182,9 @@ public class Communicator extends UpperLayer {
 			}
 		}
 	}
-
+	
 	// Internal ////////////////////////////////////////////////////////////////
-
+	
 	/*
 	 * This method connects the layers in order to build the communication stack
 	 * 
@@ -172,26 +193,27 @@ public class Communicator extends UpperLayer {
 	 * probabilistic model in order to evaluate the implementation.
 	 */
 	private void buildStack() {
-
-		this.setLowerLayer(tokenLayer);
-		tokenLayer.setLowerLayer(transferLayer);
-		transferLayer.setLowerLayer(matchingLayer);
-		matchingLayer.setLowerLayer(transactionLayer);
-		transactionLayer.setLowerLayer(udpLayer);
+		
+		setLowerLayer(this.rateControlLayer);
+		this.rateControlLayer.setLowerLayer(this.tokenLayer);
+		this.tokenLayer.setLowerLayer(this.transferLayer);
+		this.transferLayer.setLowerLayer(this.matchingLayer);
+		this.matchingLayer.setLowerLayer(this.transactionLayer);
+		this.transactionLayer.setLowerLayer(this.udpLayer);
 		
 		//transactionLayer.setLowerLayer(adverseLayer);
 		//adverseLayer.setLowerLayer(udpLayer);
-
+		
 	}
-
+	
 	// I/O implementation //////////////////////////////////////////////////////
-
+	
 	@Override
 	protected void doSendMessage(Message msg) throws IOException {
-
+		
 		// defensive programming before entering the stack, lower layers should assume a correct message.
 		if (msg != null) {
-		
+			
 			// check message before sending through the stack
 			if (msg.getPeerAddress().getAddress()==null) {
 				throw new IOException("Remote address not specified");
@@ -199,30 +221,38 @@ public class Communicator extends UpperLayer {
 			
 			// delegate to first layer
 			sendMessageOverLowerLayer(msg);
+			
+			//msg.prettyPrint();
 		}
 	}
-
+	
 	@Override
 	protected void doReceiveMessage(Message msg) {
-
+		
 		if (msg instanceof Response) {
 			Response response = (Response) msg;
-
+			
 			// initiate custom response handling
 			response.handle();
 		}
-
+		
 		// pass message to registered receivers
 		deliverMessage(msg);
-
+		
+		//msg.prettyPrint();
+		
 	}
-
+	
 	// Queries /////////////////////////////////////////////////////////////////
-
+	
 	public int port() {
-		return udpLayer.getPort();
+		return this.udpLayer.getPort();
 	}
-
+	
+	public RateControlLayer getRateControlLayer() {
+		return this.rateControlLayer;
+	}
+	
 	public TokenLayer getTokenLayer() {
 		return this.tokenLayer;
 	}
