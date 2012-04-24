@@ -28,39 +28,50 @@
  * 
  * This file is part of the Californium (Cf) CoAP framework.
  ******************************************************************************/
-package ch.ethz.inf.vs.californium.layers;
+package ch.ethz.inf.vs.californium.examples;
 
-import java.io.IOException;
+import java.net.SocketException;
 
-import ch.ethz.inf.vs.californium.coap.Message;
+import ch.ethz.inf.vs.californium.endpoint.Endpoint;
+import ch.ethz.inf.vs.californium.endpoint.ProxyEndpoint;
+import ch.ethz.inf.vs.californium.util.Log;
 
 /**
- * The Class CachingLayer.
+ * The Class ProxyExample.
  * 
  * @author Francesco Corazza
  */
-public class CachingLayer extends UpperLayer {
+public class ExampleProxy extends ProxyEndpoint {
 	
 	/**
-	 * Instantiates a new caching layer.
+	 * Instantiates a new proxy example.
+	 * 
+	 * @throws SocketException
+	 *             the socket exception
 	 */
-	public CachingLayer() {
+	public ExampleProxy() throws SocketException {
+		
 	}
 	
-	/* (non-Javadoc)
-	 * @see ch.ethz.inf.vs.californium.layers.Layer#doSendMessage(ch.ethz.inf.vs.californium.coap.Message)
-	 */
-	@Override
-	protected void doSendMessage(Message msg) throws IOException {
-		sendMessageOverLowerLayer(msg);
-	}
+	// Application entry point /////////////////////////////////////////////////
 	
-	/* (non-Javadoc)
-	 * @see ch.ethz.inf.vs.californium.layers.Layer#doReceiveMessage(ch.ethz.inf.vs.californium.coap.Message)
-	 */
-	@Override
-	protected void doReceiveMessage(Message msg) {
-		deliverMessage(msg);
+	public static void main(String[] args) {
+		
+		Log.init();
+		
+		// create server
+		try {
+			
+			Endpoint proxy = new ExampleProxy();
+			
+			System.out.println("Proxy started");
+			
+		} catch (SocketException e) {
+			
+			LOG.severe("Failed to create Proxy: \n" +
+					e.getMessage());
+			System.exit(-1);
+		}
+		
 	}
-	
 }
