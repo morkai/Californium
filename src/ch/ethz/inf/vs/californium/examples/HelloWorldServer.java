@@ -46,19 +46,19 @@ public class HelloWorldServer extends LocalEndpoint {
 	 * 
 	 */
 	class HelloWorldResource extends LocalResource {
-
+		
 		public HelloWorldResource() {
-
+			
 			// set resource identifier
-			super("helloWorld"); 
+			super("helloWorld");
 			
 			// set display name
 			setTitle("Hello-World Resource");
 		}
-
+		
 		@Override
 		public void performGET(GETRequest request) {
-
+			
 			// respond to the request
 			request.respond(CodeRegistry.RESP_CONTENT, "Hello World!");
 		}
@@ -74,7 +74,7 @@ public class HelloWorldServer extends LocalEndpoint {
 		// provide an instance of a Hello-World resource
 		addResource(new HelloWorldResource());
 	}
-
+	
 	/*
 	 * Application entry point.
 	 * 
@@ -86,7 +86,7 @@ public class HelloWorldServer extends LocalEndpoint {
 			// create server
 			HelloWorldServer server = new HelloWorldServer();
 			
-			System.out.println("Server listening on port " + server.port());
+			System.out.println("Server listening on port " + server.getPort());
 			
 		} catch (SocketException e) {
 			

@@ -38,7 +38,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import ch.ethz.inf.vs.californium.coap.Message;
 
 /**
- * The Class AbstractCommunicator.
+ * The Class AbstractStack.
  *
  * @author Francesco Corazza
  */
@@ -47,7 +47,7 @@ public abstract class AbstractStack extends UpperLayer {
 	// Static Attributes ///////////////////////////////////////////////////////////
 	
 	/** The udp port. */
-	protected int udpPort = 0;
+	protected int udpPort = 0; // TODO
 	
 	/** The run as daemon. */
 	protected boolean runAsDaemon = true; // JVM will shut down if no user threads are running
@@ -62,10 +62,24 @@ public abstract class AbstractStack extends UpperLayer {
 	
 	protected UpperLayer upperLayer = null;
 	
+	protected int actualPort;
+	
 	// Constructors /////////////////////////////////////////////////////////////////////
 	
+	/**
+	 * 
+	 * @param actualPort The local UDP port to listen for incoming messages
+	 * @param daemon True if receiver thread should terminate with main thread
+	 * @param defaultBlockSize The default block size used for block-wise transfers
+	 *        or -1 to disable outgoing block-wise transfers
+	 * @throws SocketException
+	 */
 	public AbstractStack(int udpPort, int transferBlockSize, boolean runAsDaemon)
 			throws SocketException {
+		this.udpPort = udpPort;
+		this.transferBlockSize = transferBlockSize;
+		this.runAsDaemon = runAsDaemon;
+		
 		enquequeLayer(this);
 		createStack();
 	}
@@ -130,24 +144,24 @@ public abstract class AbstractStack extends UpperLayer {
 		return this.upperLayer;
 	}
 	
-	/**
-	 * @param upperLayer the upperLayer to set
-	 */
-	public void setUpperLayer(UpperLayer upperLayer) {
-		if (upperLayer == null) {
-			throw new IllegalArgumentException("upperLayer == null");
-		}
-		
-		// if the upperLayer is already set it needs to remove it from the deque
-		if (this.upperLayer != null) {
-			this.layerQueue.remove(upperLayer);
-		}
-		
-		// put the layer at the beginnign of the deque and link it it with the communicator
-		this.layerQueue.addLast(upperLayer);
-		upperLayer.setLowerLayer(this);
-		this.upperLayer = upperLayer;
-	}
+	//	/**
+	//	 * @param upperLayer the upperLayer to set
+	//	 */
+	//	public void setUpperLayer(UpperLayer upperLayer) {
+	//		if (upperLayer == null) {
+	//			throw new IllegalArgumentException("upperLayer == null");
+	//		}
+	//		
+	//		// if the upperLayer is already set it needs to remove it from the deque
+	//		if (this.upperLayer != null) {
+	//			this.layerQueue.remove(upperLayer);
+	//		}
+	//		
+	//		// put the layer at the beginnign of the deque and link it it with the communicator
+	//		this.layerQueue.addLast(upperLayer);
+	//		upperLayer.setLowerLayer(this);
+	//		this.upperLayer = upperLayer;
+	//	}
 	
 	// Internal ////////////////////////////////////////////////////////////////
 	
@@ -160,7 +174,7 @@ public abstract class AbstractStack extends UpperLayer {
 			if (firstLayer instanceof UpperLayer) {
 				((UpperLayer) firstLayer).setLowerLayer(layer);
 				LOG.config(firstLayer.getClass().getSimpleName()
-						+ " has above "
+						+ " has below "
 						+ layer.getClass().getSimpleName());
 			}
 		}
@@ -168,13 +182,6 @@ public abstract class AbstractStack extends UpperLayer {
 		this.layerQueue.addFirst(layer);
 	}
 	
-	public void pushMessageInTheStack(Message message) throws IOException {
-		LOG.fine(this.getClass().getSimpleName() + " pushMessageInTheStack");
-		
-		this.upperLayer.sendMessage(message);
-		
-		//message.acceptVisitor(this.visitor);
-	}
 	
 	// I/O implementation //////////////////////////////////////////////////////
 	
@@ -217,4 +224,7 @@ public abstract class AbstractStack extends UpperLayer {
 		deliverMessage(msg);
 	}
 	
+	public int getPort() {
+		return this.actualPort;
+	}
 }

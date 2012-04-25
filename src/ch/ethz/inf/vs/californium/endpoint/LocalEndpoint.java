@@ -240,7 +240,7 @@ public class LocalEndpoint extends Endpoint {
 					resource = base;
 				}
 			}
-			rootResource.add(resource);
+			this.rootResource.addSubResource(resource);
 		}
 	}
 

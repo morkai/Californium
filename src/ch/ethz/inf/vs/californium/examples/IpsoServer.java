@@ -42,7 +42,15 @@ import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
 import ch.ethz.inf.vs.californium.endpoint.LocalEndpoint;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
-import ch.ethz.inf.vs.californium.examples.ipso.*;
+import ch.ethz.inf.vs.californium.examples.ipso.DeviceBattery;
+import ch.ethz.inf.vs.californium.examples.ipso.DeviceManufacturer;
+import ch.ethz.inf.vs.californium.examples.ipso.DeviceModel;
+import ch.ethz.inf.vs.californium.examples.ipso.DeviceName;
+import ch.ethz.inf.vs.californium.examples.ipso.DeviceSerial;
+import ch.ethz.inf.vs.californium.examples.ipso.PowerCumulative;
+import ch.ethz.inf.vs.californium.examples.ipso.PowerDimmer;
+import ch.ethz.inf.vs.californium.examples.ipso.PowerInstantaneous;
+import ch.ethz.inf.vs.californium.examples.ipso.PowerRelay;
 import ch.ethz.inf.vs.californium.util.Log;
 
 /**
@@ -52,7 +60,7 @@ import ch.ethz.inf.vs.californium.util.Log;
  * @author Matthias Kovatsch
  */
 public class IpsoServer extends LocalEndpoint {
-
+	
 	// exit codes for runtime errors
 	public static final int ERR_INIT_FAILED = 1;
 	
@@ -70,13 +78,13 @@ public class IpsoServer extends LocalEndpoint {
 		addResource(new DeviceModel());
 		addResource(new DeviceSerial());
 		addResource(new DeviceBattery());
-
+		
 		addResource(new PowerInstantaneous());
 		addResource(new PowerCumulative());
 		addResource(new PowerRelay());
 		addResource(new PowerDimmer());
 	}
-
+	
 	// Logging /////////////////////////////////////////////////////////////////
 	
 	@Override
@@ -88,12 +96,12 @@ public class IpsoServer extends LocalEndpoint {
 		// dispatch to requested resource
 		super.handleRequest(request);
 	}
-
+	
 	
 	// Application entry point /////////////////////////////////////////////////
 	
 	public static void main(String[] args) {
-
+		
 		Log.setLevel(Level.INFO);
 		Log.init();
 		
@@ -102,30 +110,31 @@ public class IpsoServer extends LocalEndpoint {
 			
 			LocalEndpoint server = new IpsoServer();
 			
-			System.out.printf(IpsoServer.class.getSimpleName()+" listening on port %d.\n", server.port());
+			System.out.printf(IpsoServer.class.getSimpleName()
+					+ " listening on port %d.\n", server.getPort());
 			
 			Request register = new POSTRequest() {
-					@Override
-			        protected void handleResponse(Response response) {
-			            // specific handling for this request
-			            // here: response received, output a pretty-print
-						System.out.println("Successfully regeistered");
-			            response.prettyPrint();
-			        }
-				};
-				
+				@Override
+				protected void handleResponse(Response response) {
+					// specific handling for this request
+					// here: response received, output a pretty-print
+					System.out.println("Successfully regeistered");
+					response.prettyPrint();
+				}
+			};
+			
 			// RD location
 			String rd = "coap://interop.ams.sensinode.com:5683/rd";
-			if (args.length>0 && args[0].startsWith("coap://")) {
+			if ((args.length>0) && args[0].startsWith("coap://")) {
 				rd = args[0];
 			} else {
 				System.out.println("Hint: You can give the RD URI as first argument.");
 				System.out.println("Fallback to SensiNode RD");
 			}
-				
+			
 			// Individual hostname
 			String hostname = Double.toString(Math.round(Math.random()*1000));
-			if (args.length>1 && args[1].matches("[A-Za-z0-9-_]+")) {
+			if ((args.length>1) && args[1].matches("[A-Za-z0-9-_]+")) {
 				hostname = args[1];
 			} else {
 				System.out.println("Hint: You can give an alphanumeric (plus '-' and '_') string as second argument to specify a custom hostname.");
@@ -140,7 +149,7 @@ public class IpsoServer extends LocalEndpoint {
 			
 			register.setURI(rd+"?h=Cf-"+hostname);
 			register.setPayload(LinkFormat.serialize(server.getRootResource(), null, true), MediaTypeRegistry.APPLICATION_LINK_FORMAT);
-
+			
 			// execute the request
 			try {
 				System.out.println("Registering at "+rd+" as Cf-"+hostname);
@@ -151,11 +160,11 @@ public class IpsoServer extends LocalEndpoint {
 			}
 			
 		} catch (SocketException e) {
-
+			
 			System.err.printf("Failed to create "+IpsoServer.class.getSimpleName()+": %s\n", e.getMessage());
 			System.exit(ERR_INIT_FAILED);
 		}
 		
 	}
-
+	
 }

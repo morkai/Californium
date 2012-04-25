@@ -33,7 +33,6 @@ package ch.ethz.inf.vs.californium.endpoint;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import ch.ethz.inf.vs.californium.coap.Communicator;
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.MessageHandler;
 import ch.ethz.inf.vs.californium.coap.MessageReceiver;
@@ -46,30 +45,28 @@ import ch.ethz.inf.vs.californium.coap.Request;
  * @author Dominique Im Obersteg, Daniel Pauli, and Matthias Kovatsch
  */
 public abstract class Endpoint implements MessageReceiver, MessageHandler {
-
-// Logging /////////////////////////////////////////////////////////////////////
-		
+	
+	// Logging /////////////////////////////////////////////////////////////////////
+	
 	protected static final Logger LOG = Logger.getLogger(Endpoint.class.getName());
-
-// Members /////////////////////////////////////////////////////////////////////
+	
+	// Members /////////////////////////////////////////////////////////////////////
 	
 	protected Resource rootResource;
-
-// Methods /////////////////////////////////////////////////////////////////////
+	
+	// Methods /////////////////////////////////////////////////////////////////////
 	
 	public abstract void execute(Request request) throws IOException;
-
+	
 	public int resourceCount() {
-		return rootResource != null ? rootResource.subResourceCount() + 1 : 0;
+		return this.rootResource != null ? this.rootResource.subResourceCount() + 1 : 0;
 	}
-
+	
 	@Override
 	public void receiveMessage(Message msg) {
 		msg.handleBy(this);
 	}
 	
-	public int port() {
-		return Communicator.getInstance().port();
-	}
-
+	public abstract int getPort();
+	
 }

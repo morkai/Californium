@@ -36,7 +36,16 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.logging.Level;
 
-import ch.ethz.inf.vs.californium.coap.*;
+import ch.ethz.inf.vs.californium.coap.DELETERequest;
+import ch.ethz.inf.vs.californium.coap.GETRequest;
+import ch.ethz.inf.vs.californium.coap.MediaTypeRegistry;
+import ch.ethz.inf.vs.californium.coap.Option;
+import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
+import ch.ethz.inf.vs.californium.coap.POSTRequest;
+import ch.ethz.inf.vs.californium.coap.PUTRequest;
+import ch.ethz.inf.vs.californium.coap.Request;
+import ch.ethz.inf.vs.californium.coap.Response;
+import ch.ethz.inf.vs.californium.coap.TokenManager;
 import ch.ethz.inf.vs.californium.endpoint.RemoteResource;
 import ch.ethz.inf.vs.californium.endpoint.Resource;
 import ch.ethz.inf.vs.californium.util.Log;
@@ -59,19 +68,19 @@ import ch.ethz.inf.vs.californium.util.Log;
  * <li>{@code SampleClient DISCOVER coap://localhost}
  * <li>{@code SampleClient POST coap://someServer.org:5683 my data}
  * </ul>
- *  
+ * 
  * @author Dominique Im Obersteg, Daniel Pauli, and Matthias Kovatsch
  */
 public class ExampleClient {
-
+	
 	// resource URI path used for discovery
 	private static final String DISCOVERY_RESOURCE = "/.well-known/core";
-
+	
 	// indices of command line parameters
 	private static final int IDX_METHOD          = 0;
 	private static final int IDX_URI             = 1;
 	private static final int IDX_PAYLOAD         = 2;
-
+	
 	// exit codes for runtime errors
 	private static final int ERR_MISSING_METHOD  = 1;
 	private static final int ERR_UNKNOWN_METHOD  = 2;
@@ -80,27 +89,27 @@ public class ExampleClient {
 	private static final int ERR_REQUEST_FAILED  = 5;
 	private static final int ERR_RESPONSE_FAILED = 6;
 	private static final int ERR_BAD_LINK_FORMAT = 7;
-
+	
 	/*
 	 * Main method of this client.
 	 */
 	public static void main(String[] args) {
-
+		
 		// initialize parameters
 		String method = null;
 		URI uri = null;
 		String payload = null;
 		boolean loop = false;
-
+		
 		// display help if no parameters specified
 		if (args.length == 0) {
 			printInfo();
 			return;
 		}
-
+		
 		Log.setLevel(Level.ALL);
 		Log.init();
-
+		
 		// input parameters
 		int idx = 0;
 		for (String arg : args) {
@@ -112,27 +121,27 @@ public class ExampleClient {
 				}
 			} else {
 				switch (idx) {
-				case IDX_METHOD:
-					method = arg.toUpperCase();
-					break;
-				case IDX_URI:
-					try {
-						uri = new URI(arg);
-					} catch (URISyntaxException e) {
-						System.err.println("Failed to parse URI: " + e.getMessage());
-						System.exit(ERR_BAD_URI);
-					}
-					break;
-				case IDX_PAYLOAD:
-					payload = arg;
-					break;
-				default:
-					System.out.println("Unexpected argument: " + arg);
+					case IDX_METHOD:
+						method = arg.toUpperCase();
+						break;
+					case IDX_URI:
+						try {
+							uri = new URI(arg);
+						} catch (URISyntaxException e) {
+							System.err.println("Failed to parse URI: " + e.getMessage());
+							System.exit(ERR_BAD_URI);
+						}
+						break;
+					case IDX_PAYLOAD:
+						payload = arg;
+						break;
+					default:
+						System.out.println("Unexpected argument: " + arg);
 				}
 				++idx;
 			}
 		}
-
+		
 		// check if mandatory parameters specified
 		if (method == null) {
 			System.err.println("Method not specified");
@@ -149,14 +158,14 @@ public class ExampleClient {
 			System.err.println("Unknown method: " + method);
 			System.exit(ERR_UNKNOWN_METHOD);
 		}
-
+		
 		if (method.equals("OBSERVE")) {
 			request.setOption(new Option(0, OptionNumberRegistry.OBSERVE));
 			loop = true;
 		}
-
+		
 		// set request URI
-		if (method.equals("DISCOVER") && (uri.getPath() == null || uri.getPath().isEmpty() || uri.getPath().equals("/"))) {
+		if (method.equals("DISCOVER") && ((uri.getPath() == null) || uri.getPath().isEmpty() || uri.getPath().equals("/"))) {
 			// add discovery resource path to URI
 			try {
 				uri = new URI(uri.getScheme(), uri.getAuthority(), DISCOVERY_RESOURCE, uri.getQuery());
@@ -180,12 +189,12 @@ public class ExampleClient {
 		// execute request
 		try {
 			request.execute();
-
+			
 			// loop for receiving multiple responses
 			do {
-	
+				
 				// receive response
-	
+				
 				System.out.println("Receiving response...");
 				Response response = null;
 				try {
@@ -194,46 +203,46 @@ public class ExampleClient {
 					System.err.println("Failed to receive response: " + e.getMessage());
 					System.exit(ERR_RESPONSE_FAILED);
 				}
-	
+				
 				// output response
-	
+				
 				if (response != null) {
-	
+					
 					response.prettyPrint();
 					System.out.println("Time elapsed (ms): " + response.getRTT());
-	
+					
 					// check of response contains resources
 					if (response.getContentType()==MediaTypeRegistry.APPLICATION_LINK_FORMAT) {
-	
+						
 						String linkFormat = response.getPayloadString();
-	
+						
 						// create resource three from link format
 						Resource root = RemoteResource.newRoot(linkFormat);
 						if (root != null) {
-	
+							
 							// output discovered resources
 							System.out.println("\nDiscovered resources:");
 							root.prettyPrint();
-	
+							
 						} else {
 							System.err.println("Failed to parse link format");
 							System.exit(ERR_BAD_LINK_FORMAT);
 						}
 					} else {
-	
+						
 						// check if link format was expected by client
 						if (method.equals("DISCOVER")) {
 							System.out.println("Server error: Link format not specified");
 						}
 					}
-	
+					
 				} else {
-	
-					// no response received	
+					
+					// no response received
 					System.err.println("Request timed out");
 					break;
 				}
-	
+				
 			} while (loop);
 			
 		} catch (UnknownHostException e) {
@@ -243,11 +252,11 @@ public class ExampleClient {
 			System.err.println("Failed to execute request: " + e.getMessage());
 			System.exit(ERR_REQUEST_FAILED);
 		}
-
+		
 		// finish
 		System.out.println();
 	}
-
+	
 	/*
 	 * Outputs user guide of this program.
 	 */
@@ -267,7 +276,7 @@ public class ExampleClient {
 		System.out.println("  ExampleClient DISCOVER coap://localhost");
 		System.out.println("  ExampleClient POST coap://vs0.inf.ethz.ch:5683/storage my data");
 	}
-
+	
 	/*
 	 * Instantiates a new request based on a string describing a method.
 	 * 
@@ -290,5 +299,5 @@ public class ExampleClient {
 			return null;
 		}
 	}
-
+	
 }

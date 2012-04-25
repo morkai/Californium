@@ -88,7 +88,9 @@ public class DefaultStack extends AbstractStack {
 		enquequeLayer(new MatchingLayer());
 		enquequeLayer(new TransactionLayer());
 		// enquequeLayer(new AdverseLayer());
-		enquequeLayer(new UDPLayer(this.udpPort, this.runAsDaemon));
+		UDPLayer udpLayer = new UDPLayer(this.udpPort, this.runAsDaemon);
+		enquequeLayer(udpLayer);
+		this.actualPort = udpLayer.getPort();
 	}
 	
 }

@@ -35,6 +35,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import ch.ethz.inf.vs.californium.coap.Communicator;
+import ch.ethz.inf.vs.californium.coap.Communicator.COMMUNICATOR_MODE;
 import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
 
@@ -45,7 +46,10 @@ import ch.ethz.inf.vs.californium.coap.Response;
  * @author Dominique Im Obersteg, Daniel Pauli, and Matthias Kovatsch
  */
 public class RemoteEndpoint extends Endpoint {
-
+	
+	protected URI uri;
+	private COMMUNICATOR_MODE mode = COMMUNICATOR_MODE.DEFAULT;
+	
 	public static Endpoint fromURI(String uri) {
 		try {
 			return new RemoteEndpoint(new URI(uri));
@@ -56,39 +60,42 @@ public class RemoteEndpoint extends Endpoint {
 			return null;
 		}
 	}
-
+	
 	public RemoteEndpoint(URI uri) {
 		
 		// initialize communicator
-		Communicator.setupDeamon(true);
+		Communicator.setDaemon(true);
 		Communicator.getInstance().registerReceiver(this);
-
+		
 		this.uri = uri;
 	}
-
+	
 	@Override
 	public void execute(Request request) throws IOException {
-
+		
 		if (request != null) {
-
+			
 			request.setURI(this.uri);
-
+			
 			// execute the request
 			request.execute();
 		}
-
+		
 	}
-
-	protected URI uri;
-
+	
 	@Override
 	public void handleRequest(Request request) {
 		// TODO Auto-generated method stub
-
+		
 	}
-
+	
 	@Override
 	public void handleResponse(Response response) {
 		// response.handle();
+	}
+	
+	@Override
+	public int getPort() {
+		return Communicator.getInstance().getPort(this.mode);
 	}
 }

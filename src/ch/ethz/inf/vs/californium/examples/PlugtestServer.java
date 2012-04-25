@@ -37,7 +37,14 @@ import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.endpoint.Endpoint;
 import ch.ethz.inf.vs.californium.endpoint.LocalEndpoint;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
-import ch.ethz.inf.vs.californium.examples.plugtest.*;
+import ch.ethz.inf.vs.californium.examples.plugtest.DefaultTest;
+import ch.ethz.inf.vs.californium.examples.plugtest.Large;
+import ch.ethz.inf.vs.californium.examples.plugtest.LargeCreate;
+import ch.ethz.inf.vs.californium.examples.plugtest.LargeUpdate;
+import ch.ethz.inf.vs.californium.examples.plugtest.LongPath;
+import ch.ethz.inf.vs.californium.examples.plugtest.Observe;
+import ch.ethz.inf.vs.californium.examples.plugtest.Query;
+import ch.ethz.inf.vs.californium.examples.plugtest.Separate;
 import ch.ethz.inf.vs.californium.util.Log;
 
 /**
@@ -47,7 +54,7 @@ import ch.ethz.inf.vs.californium.util.Log;
  * @author Matthias Kovatsch
  */
 public class PlugtestServer extends LocalEndpoint {
-
+	
 	// exit codes for runtime errors
 	public static final int ERR_INIT_FAILED = 1;
 	
@@ -69,7 +76,7 @@ public class PlugtestServer extends LocalEndpoint {
 		addResource(new LargeCreate());
 		addResource(new Observe());
 	}
-
+	
 	// Logging /////////////////////////////////////////////////////////////////
 	
 	@Override
@@ -81,12 +88,12 @@ public class PlugtestServer extends LocalEndpoint {
 		// dispatch to requested resource
 		super.handleRequest(request);
 	}
-
+	
 	
 	// Application entry point /////////////////////////////////////////////////
 	
 	public static void main(String[] args) {
-
+		
 		Log.setLevel(Level.INFO);
 		Log.init();
 		
@@ -95,14 +102,15 @@ public class PlugtestServer extends LocalEndpoint {
 			
 			Endpoint server = new PlugtestServer();
 			
-			System.out.printf(PlugtestServer.class.getSimpleName()+" listening on port %d.\n", server.port());
+			System.out.printf(PlugtestServer.class.getSimpleName()
+					+ " listening on port %d.\n", server.getPort());
 			
 		} catch (SocketException e) {
-
+			
 			System.err.printf("Failed to create "+PlugtestServer.class.getSimpleName()+": %s\n", e.getMessage());
 			System.exit(ERR_INIT_FAILED);
 		}
 		
 	}
-
+	
 }

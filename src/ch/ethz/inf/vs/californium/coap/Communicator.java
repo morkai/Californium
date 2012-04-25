@@ -33,13 +33,9 @@ package ch.ethz.inf.vs.californium.coap;
 import java.io.IOException;
 import java.net.SocketException;
 
-import ch.ethz.inf.vs.californium.layers.AdverseLayer;
-import ch.ethz.inf.vs.californium.layers.MatchingLayer;
-import ch.ethz.inf.vs.californium.layers.RateControlLayer;
-import ch.ethz.inf.vs.californium.layers.TokenLayer;
-import ch.ethz.inf.vs.californium.layers.TransactionLayer;
-import ch.ethz.inf.vs.californium.layers.TransferLayer;
-import ch.ethz.inf.vs.californium.layers.UDPLayer;
+import ch.ethz.inf.vs.californium.layers.AbstractStack;
+import ch.ethz.inf.vs.californium.layers.DefaultStack;
+import ch.ethz.inf.vs.californium.layers.ProxyStack;
 import ch.ethz.inf.vs.californium.layers.UpperLayer;
 
 /**
@@ -62,48 +58,54 @@ import ch.ethz.inf.vs.californium.layers.UpperLayer;
  */
 public class Communicator extends UpperLayer {
 	
-	// Static Attributes ///////////////////////////////////////////////////////////
+	public static enum COMMUNICATOR_MODE {
+		DEFAULT, COAP_PROXY, HTTP_TO_COAP_PROXY, COAP_TO_HTTP_PROXY;
+		
+	}
+	
+	private static COMMUNICATOR_MODE mode = COMMUNICATOR_MODE.DEFAULT;
 	
 	private volatile static Communicator singleton = null;
-	private static int udpPort = 0;
-	private static boolean runAsDaemon = true; // JVM will shut down if no user threads are running
-	private static int transferBlockSize = 0;
-	private static int requestPerSecond = 10;
 	
-	// Members /////////////////////////////////////////////////////////////////////
+	private ProxyStack proxyStack;
+	private DefaultStack defaultStack;
 	
-	protected TokenLayer tokenLayer;
-	protected TransferLayer transferLayer;
-	protected MatchingLayer matchingLayer;
-	protected TransactionLayer transactionLayer;
-	protected AdverseLayer adverseLayer;
-	protected UDPLayer udpLayer;
-	protected RateControlLayer rateControlLayer;
+	// the following parameters should be externalized in an xml file
+	// and set for each client/server created
+	//	private static int serverHttpPort = 80;
+	//	private static int clientHttpPort = 0;
+	private static int defaultUdpPort = 0;
+	private static int proxyUdpPort = 0;
+	private static boolean daemon = false;
+	private static int blockSize = 0;
+	private static int requestPerSecond = 1000;
 	
-	// Constructors ////////////////////////////////////////////////////////////////
 	
-	/*
-	 * Constructor for a new Communicator
-	 * 
-	 * @param port The local UDP port to listen for incoming messages
-	 * @param daemon True if receiver thread should terminate with main thread
-	 * @param defaultBlockSize The default block size used for block-wise transfers
-	 *        or -1 to disable outgoing block-wise transfers
-	 */
-	private Communicator() throws SocketException {
+	public Communicator() {
 		
-		// initialize layers
-		this.rateControlLayer = new RateControlLayer(requestPerSecond);
-		this.tokenLayer = new TokenLayer();
-		this.transferLayer = new TransferLayer(transferBlockSize);
-		this.matchingLayer = new MatchingLayer();
-		this.transactionLayer = new TransactionLayer();
-		this.adverseLayer = new AdverseLayer();
-		this.udpLayer = new UDPLayer(udpPort, runAsDaemon);
-		
-		// connect layers
-		buildStack();
-		
+		try {
+			// the switch doesn't use the break because it needs an incremental initialization
+			switch (mode) {
+				case COAP_TO_HTTP_PROXY:
+					//				this.httpClientStack = new HttpClientStack();
+				case HTTP_TO_COAP_PROXY:
+					//				this.httpServerStack = new HttpServerStack();
+				case COAP_PROXY:
+					this.proxyStack = new ProxyStack(proxyUdpPort, blockSize,
+							daemon, requestPerSecond);
+				case DEFAULT:
+					this.defaultStack = new DefaultStack(defaultUdpPort,
+							blockSize, daemon);
+					setLowerLayer(this.defaultStack);
+					break;
+				default:
+					LOG.severe("Not recognized option mode");
+					break;
+			}
+		} catch (SocketException e) {
+			LOG.severe("Unable to create the stack");
+			//FIXME retrow an exception
+		}
 	}
 	
 	public static Communicator getInstance() {
@@ -111,25 +113,20 @@ public class Communicator extends UpperLayer {
 		if (singleton==null) {
 			synchronized (Communicator.class) {
 				if (singleton==null) {
-					try {
-						singleton = new Communicator();
-					} catch (SocketException e) {
-						LOG.severe(String.format("Failed to create Communicator: %s\n", e.getMessage()));
-						System.exit(-1);
-					}
+					singleton = new Communicator();
 				}
 			}
 		}
 		return singleton;
 	}
 	
-	public static void setupPort(int port) {
-		if ((port!=udpPort) && (singleton==null)) {
+	public static void setMode(COMMUNICATOR_MODE mode) {
+		// double check
+		if ((Communicator.mode != mode) && (singleton == null)) {
 			synchronized (Communicator.class) {
-				if (singleton==null) {
-					
-					udpPort = port;
-					LOG.config(String.format("Custom port: %d", udpPort));
+				if (singleton == null) {
+					Communicator.mode = mode;
+					LOG.config("Setting mode communicator: " + mode);
 					
 				} else {
 					LOG.severe("Communicator already initialized, setup failed");
@@ -138,15 +135,60 @@ public class Communicator extends UpperLayer {
 		}
 	}
 	
-	public static void setupRequestPerSecond(int requestPerSecond) {
-		if ((requestPerSecond != Communicator.requestPerSecond)
+	public static void setDefaultUdpPort(int port) {
+		// double check
+		if ((Communicator.defaultUdpPort != port) && (singleton == null)) {
+			synchronized (Communicator.class) {
+				if (singleton == null) {
+					Communicator.defaultUdpPort = port;
+					LOG.config("Setting port: " + port);
+					
+				} else {
+					LOG.severe("Communicator already initialized, setup failed");
+				}
+			}
+		}
+	}
+	
+	public static void setDaemon(boolean daemon) {
+		// double check
+		if ((Communicator.daemon != daemon) && (singleton == null)) {
+			synchronized (Communicator.class) {
+				if (singleton == null) {
+					Communicator.daemon = daemon;
+					LOG.config("Setting daemon: " + daemon);
+					
+				} else {
+					LOG.severe("Communicator already initialized, setup failed");
+				}
+			}
+		}
+	}
+	
+	public static void setBlockSize(int blockSize) {
+		// double check
+		if ((Communicator.blockSize != blockSize) && (singleton == null)) {
+			synchronized (Communicator.class) {
+				if (singleton == null) {
+					Communicator.blockSize = blockSize;
+					LOG.config("Setting blockSize: " + blockSize);
+					
+				} else {
+					LOG.severe("Communicator already initialized, setup failed");
+				}
+			}
+		}
+	}
+	
+	public static void setRequestPerSecond(int requestPerSecond) {
+		// double check
+		if ((Communicator.requestPerSecond != requestPerSecond)
 				&& (singleton == null)) {
 			synchronized (Communicator.class) {
 				if (singleton == null) {
-					
 					Communicator.requestPerSecond = requestPerSecond;
-					LOG.config(String.format("Request per second: %d",
-							requestPerSecond));
+					LOG.config("Setting requestPerSecond: " + requestPerSecond);
+					
 				} else {
 					LOG.severe("Communicator already initialized, setup failed");
 				}
@@ -154,56 +196,19 @@ public class Communicator extends UpperLayer {
 		}
 	}
 	
-	public static void setupTransfer(int defaultBlockSize) {
-		if ((defaultBlockSize!=transferBlockSize) && (singleton==null)) {
+	public static void setProxyUdpPort(int proxyUdpPort) {
+		// double check
+		if ((Communicator.proxyUdpPort != proxyUdpPort) && (singleton == null)) {
 			synchronized (Communicator.class) {
-				if (singleton==null) {
-					
-					transferBlockSize = defaultBlockSize;
-					LOG.config(String.format("Custom block size: %d", transferBlockSize));
-					
-				} else {
-					LOG.severe("Communicator already initialized, setup failed");
-				}
-			}
-		}
-	}
-	public static void setupDeamon(boolean daemon) {
-		if ((daemon!=runAsDaemon) && (singleton==null)) {
-			synchronized (Communicator.class) {
-				if (singleton==null) {
-					
-					runAsDaemon = daemon;
-					LOG.config(String.format("Custom daemon option: %b", runAsDaemon));
+				if (singleton == null) {
+					Communicator.proxyUdpPort = proxyUdpPort;
+					LOG.config("Setting proxyUdpPort: " + proxyUdpPort);
 					
 				} else {
 					LOG.severe("Communicator already initialized, setup failed");
 				}
 			}
 		}
-	}
-	
-	// Internal ////////////////////////////////////////////////////////////////
-	
-	/*
-	 * This method connects the layers in order to build the communication stack
-	 * 
-	 * It can be overridden by subclasses in order to add further layers, e.g.
-	 * for introducing a layer that drops or duplicates messages by a
-	 * probabilistic model in order to evaluate the implementation.
-	 */
-	private void buildStack() {
-		
-		setLowerLayer(this.rateControlLayer);
-		this.rateControlLayer.setLowerLayer(this.tokenLayer);
-		this.tokenLayer.setLowerLayer(this.transferLayer);
-		this.transferLayer.setLowerLayer(this.matchingLayer);
-		this.matchingLayer.setLowerLayer(this.transactionLayer);
-		this.transactionLayer.setLowerLayer(this.udpLayer);
-		
-		//transactionLayer.setLowerLayer(adverseLayer);
-		//adverseLayer.setLowerLayer(udpLayer);
-		
 	}
 	
 	// I/O implementation //////////////////////////////////////////////////////
@@ -243,33 +248,32 @@ public class Communicator extends UpperLayer {
 		
 	}
 	
-	// Queries /////////////////////////////////////////////////////////////////
-	
-	public int port() {
-		return this.udpLayer.getPort();
+	public AbstractStack getStackForMode(COMMUNICATOR_MODE mode) {
+		AbstractStack result = null;
+		
+		switch (mode) {
+			case COAP_TO_HTTP_PROXY:
+				//				result = this.httpClientStack;
+				break;
+			case HTTP_TO_COAP_PROXY:
+				//				result = this.httpServerStack;
+				break;
+			case COAP_PROXY:
+				result = this.proxyStack;
+				break;
+			case DEFAULT:
+				result = this.defaultStack;
+				break;
+			default:
+				LOG.severe("Not recognized option mode");
+				break;
+		}
+		
+		return result;
 	}
 	
-	public RateControlLayer getRateControlLayer() {
-		return this.rateControlLayer;
+	public int getPort(COMMUNICATOR_MODE mode) {
+		return getStackForMode(mode).getPort();
 	}
 	
-	public TokenLayer getTokenLayer() {
-		return this.tokenLayer;
-	}
-	
-	public TransferLayer getTransferLayer() {
-		return this.transferLayer;
-	}
-	
-	public MatchingLayer getMatchingLayer() {
-		return this.matchingLayer;
-	}
-	
-	public TransactionLayer getTransactionLayer() {
-		return this.transactionLayer;
-	}
-	
-	public UDPLayer getUDPLayer() {
-		return this.udpLayer;
-	}
 }

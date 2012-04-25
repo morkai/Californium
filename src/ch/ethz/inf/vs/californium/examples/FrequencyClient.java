@@ -83,7 +83,7 @@ public class FrequencyClient {
 		Log.init();
 		
 		// with this directive the client have the RateControlLayer disabled
-		Communicator.setupRequestPerSecond(0);
+		Communicator.setRequestPerSecond(0);
 		
 		// create the maps for logging purpose
 		final ConcurrentHashMap<Integer, Double> delayMap = new ConcurrentHashMap<Integer, Double>();

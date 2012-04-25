@@ -48,7 +48,7 @@ import ch.ethz.inf.vs.californium.examples.resources.ZurichWeatherResource;
 import ch.ethz.inf.vs.californium.util.Log;
 
 /**
- * The class ExampleServer shows how to implement a server by extending 
+ * The class ExampleServer shows how to implement a server by extending
  * {@link LocalEndpoint}. In the implementation class, use
  * {@link LocalEndpoint#addResource(ch.ethz.inf.vs.californium.endpoint.LocalResource)}
  * to add custom resources extending {@link LocalResource}.
@@ -56,7 +56,7 @@ import ch.ethz.inf.vs.californium.util.Log;
  * @author Dominique Im Obersteg, Daniel Pauli, and Matthias Kovatsch
  */
 public class ExampleServer extends LocalEndpoint {
-
+	
 	// exit codes for runtime errors
 	public static final int ERR_INIT_FAILED = 1;
 	
@@ -79,7 +79,7 @@ public class ExampleServer extends LocalEndpoint {
 		addResource(new ImageResource());
 		addResource(new CarelessResource());
 	}
-
+	
 	// Logging /////////////////////////////////////////////////////////////////
 	
 	@Override
@@ -91,7 +91,7 @@ public class ExampleServer extends LocalEndpoint {
 		// dispatch to requested resource
 		super.handleRequest(request);
 	}
-
+	
 	
 	// Application entry point /////////////////////////////////////////////////
 	
@@ -105,14 +105,15 @@ public class ExampleServer extends LocalEndpoint {
 			Endpoint server = new ExampleServer();
 			
 			
-			System.out.printf("ExampleServer listening on port %d.\n", server.port());
+			System.out.printf("ExampleServer listening on port %d.\n",
+					server.getPort());
 			
 		} catch (SocketException e) {
-
+			
 			System.err.printf("Failed to create SampleServer: %s\n", e.getMessage());
 			System.exit(ERR_INIT_FAILED);
 		}
 		
 	}
-
+	
 }
