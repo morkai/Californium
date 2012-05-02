@@ -42,7 +42,7 @@ import ch.ethz.inf.vs.californium.coap.Option;
 import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
 import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
-import ch.ethz.inf.vs.californium.coap.Message.messageType;
+import ch.ethz.inf.vs.californium.coap.Message.MessageType;
 import ch.ethz.inf.vs.californium.util.Properties;
 
 /**
@@ -376,7 +376,7 @@ public class TransferLayer extends UpperLayer {
 				// picked arbitrary code, cannot decide if created or changed without putting resource logic here
 				reply = new Response(CodeRegistry.RESP_VALID);
 				
-				reply.setType(msg.isConfirmable() ? messageType.ACK : messageType.NON);
+				reply.setType(msg.isConfirmable() ? MessageType.ACK : MessageType.NON);
 				reply.setPeerAddress(msg.getPeerAddress());
 				
 				if (msg.isConfirmable()) reply.setMID(msg.getMID());
@@ -461,10 +461,10 @@ public class TransferLayer extends UpperLayer {
 			} else {
 				block = new Response(msg.getCode());
 				
-				if (num==0 && msg.getType()==Message.messageType.CON) {
-					block.setType(Message.messageType.CON);
+				if (num==0 && msg.getType()==Message.MessageType.CON) {
+					block.setType(Message.MessageType.CON);
 				} else {
-					block.setType(msg.isConfirmable() ? Message.messageType.ACK : Message.messageType.NON);
+					block.setType(msg.isConfirmable() ? Message.MessageType.ACK : Message.MessageType.NON);
 				}
 				block.setMID(msg.getMID());
 			}

@@ -1,13 +1,11 @@
 /**
  * 
  */
-package ch.ethz.inf.vs.californium.examples.resources;
+package ch.ethz.inf.vs.californium.endpoint;
 
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
 import ch.ethz.inf.vs.californium.coap.POSTRequest;
-import ch.ethz.inf.vs.californium.endpoint.LocalResource;
-import ch.ethz.inf.vs.californium.endpoint.Resource;
 
 /**
  * The resource is the context of the Resource Directory

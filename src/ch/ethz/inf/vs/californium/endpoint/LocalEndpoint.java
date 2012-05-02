@@ -55,97 +55,107 @@ import ch.ethz.inf.vs.californium.util.Properties;
  */
 public class LocalEndpoint extends Endpoint {
 	
-	public static final String ENDPOINT_INFO = 
-		"************************************************************\n" +
-		"This server is using the Californium (Cf) CoAP framework\n" +
-		"developed by Dominique Im Obersteg, Daniel Pauli, and\n" +
-		"Matthias Kovatsch.\n" +
-		"Cf is available under BSD 3-clause license on GitHub:\n" +
-		"https://github.com/mkovatsc/Californium\n" +
-		"\n" +
-		"(c) 2012, Institute for Pervasive Computing, ETH Zurich\n" +
-		"Contact: Matthias Kovatsch <kovatsch@inf.ethz.ch>\n" +
-		"************************************************************";
-
+	public static final String ENDPOINT_INFO =
+			"************************************************************\n" +
+					"This server is using the Californium (Cf) CoAP framework\n" +
+					"developed by Dominique Im Obersteg, Daniel Pauli, and\n" +
+					"Matthias Kovatsch.\n" +
+					"Cf is available under BSD 3-clause license on GitHub:\n" +
+					"https://github.com/mkovatsc/Californium\n" +
+					"\n" +
+					"(c) 2012, Institute for Pervasive Computing, ETH Zurich\n" +
+					"Contact: Matthias Kovatsch <kovatsch@inf.ethz.ch>\n" +
+					"************************************************************";
+	protected COMMUNICATOR_MODE mode = COMMUNICATOR_MODE.DEFAULT;
+	
+	// TODO Constructor with custom root resource; check for resourceIdentifier==""
+	
+	public LocalEndpoint(int port, int defaultBlockSze, boolean daemon) throws SocketException {
+		
+		// initialize communicator and register the local endpoint as a receiver
+		Communicator.setMode(this.mode);
+		Communicator.setDefaultUdpPort(port);
+		Communicator.setBlockSize(defaultBlockSze);
+		Communicator.setDaemon(daemon);
+		Communicator.getInstance().registerReceiver(this);
+		
+		// initialize resources
+		this.rootResource = new RootResource();
+		addResource(new DiscoveryResource(this.rootResource));
+	}
+	
+	public LocalEndpoint(int port, int defaultBlockSze) throws SocketException {
+		this(port, defaultBlockSze, false); // no daemon, keep JVM running to handle requests
+	}
+	
+	public LocalEndpoint(int port) throws SocketException {
+		this(port, 0); // let TransferLayer decide default
+	}
+	
+	public LocalEndpoint(boolean proxy) throws SocketException { // FIXME
+		// initialize resources
+		this.rootResource = new RootResource();
+		addResource(new DiscoveryResource(this.rootResource));
+	}
+	
+	public LocalEndpoint() throws SocketException {
+		this(Properties.std.getInt("DEFAULT_PORT"));
+	}
+	
 	private class RootResource extends LocalResource {
-
+		
 		public RootResource() {
 			super("", true);
 		}
-
+		
 		@Override
 		public void performGET(GETRequest request) {
-
+			
 			// create response
 			Response response = new Response(CodeRegistry.RESP_CONTENT);
-
+			
 			response.setPayload(ENDPOINT_INFO);
-
+			
 			// complete the request
 			request.respond(response);
 		}
 	}
-
-	// TODO Constructor with custom root resource; check for resourceIdentifier==""
 	
-	public LocalEndpoint(int port, int defaultBlockSze, boolean daemon) throws SocketException {
-
-		// initialize communicator
-		Communicator.setupPort(port);
-		Communicator.setupTransfer(defaultBlockSze);
-		Communicator.setupDeamon(daemon);
-		Communicator.getInstance().registerReceiver(this);
-
-		// initialize resources
-		this.rootResource = new RootResource();
-		this.addResource(new DiscoveryResource(this.rootResource));
-	}
-
-	public LocalEndpoint(int port, int defaultBlockSze) throws SocketException {
-		this(port, defaultBlockSze, false); // no daemon, keep JVM running to handle requests
-	}
-	public LocalEndpoint(int port) throws SocketException {
-		this(port, 0); // let TransferLayer decide default
-	}
-	public LocalEndpoint() throws SocketException {
-		this(Properties.std.getInt("DEFAULT_PORT"));
-	}
-
 	@Override
 	public void execute(Request request) {
-
+		
 		// check if request exists
 		if (request != null) {
-
+			
 			// retrieve resource identifier
 			String resourcePath = request.getUriPath();
-
+			
 			// lookup resource
 			LocalResource resource = getResource(resourcePath);
-
+			
 			// check if resource available
 			if (resource != null) {
 				
 				LOG.info(String.format("Dispatching execution: %s", resourcePath));
-
+				
 				// invoke request handler of the resource
 				request.dispatch(resource);
-
+				
 				// check if resource did generate a response
 				if (request.getResponse()!=null) {
-				
+					
 					// check if resource is to be observed
 					if (resource.isObservable() &&
-						request instanceof GETRequest &&
-						CodeRegistry.responseClass(request.getResponse().getCode())==CodeRegistry.CLASS_SUCCESS) {
+							(request instanceof GETRequest) &&
+							(CodeRegistry.responseClass(request.getResponse().getCode())==CodeRegistry.CLASS_SUCCESS)) {
 						
 						if (request.hasOption(OptionNumberRegistry.OBSERVE)) {
 							
 							// establish new observation relationship
 							ObservingManager.getInstance().addObserver((GETRequest) request, resource);
-	
+							
 						} else if (ObservingManager.getInstance().isObserved(request.getPeerAddress().toString(), resource)) {
-	
+							
 							// terminate observation relationship on that resource
 							ObservingManager.getInstance().removeObserver(request.getPeerAddress().toString(), resource);
 						}
@@ -155,21 +165,21 @@ public class LocalEndpoint extends Endpoint {
 					// send response here
 					request.sendResponse();
 				}
-			
+				
 			} else if (request instanceof PUTRequest) {
 				// allows creation of non-existing resources through PUT
-				this.createByPUT((PUTRequest) request);
+				createByPUT((PUTRequest) request);
 				
 			} else {
 				// resource does not exist
 				LOG.info(String.format("Cannot find resource: %s", resourcePath));
-
+				
 				request.respond(CodeRegistry.RESP_NOT_FOUND);
 				request.sendResponse();
 			}
 		}
 	}
-
+	
 	/**
 	 * Delegates a {@link PUTRequest} for a non-existing resource to the
 	 * {@link LocalResource#createSubResource(Request, String)} method of the
@@ -178,7 +188,7 @@ public class LocalEndpoint extends Endpoint {
 	 * @param request - the PUT request
 	 */
 	private void createByPUT(PUTRequest request) {
-
+		
 		String path = request.getUriPath(); // always starts with "/"
 		
 		// find existing parent up the path
@@ -190,18 +200,18 @@ public class LocalEndpoint extends Endpoint {
 			newIdentifier = path.substring(parentIdentifier.lastIndexOf('/')+1);
 			parentIdentifier = parentIdentifier.substring(0, parentIdentifier.lastIndexOf('/'));
 		} while ((parent = getResource(parentIdentifier))==null);
-
+		
 		parent.createSubResource(request, newIdentifier);
 	}
-
+	
 	public LocalResource getResource(String resourcePath) {
-		if (rootResource != null) {
-			return (LocalResource) rootResource.getResource(resourcePath, false);
+		if (this.rootResource != null) {
+			return (LocalResource) this.rootResource.getResource(resourcePath, false);
 		} else {
 			return null;
 		}
 	}
-
+	
 	/**
 	 * Adds a resource to the root resource of the endpoint. If the resource
 	 * identifier is actually a path, it is split up into multiple resources.
@@ -209,7 +219,7 @@ public class LocalEndpoint extends Endpoint {
 	 * @param resource - the resource to add to the root resource
 	 */
 	public void addResource(LocalResource resource) {
-		if (rootResource != null) {
+		if (this.rootResource != null) {
 			
 			// TODO move to LocalResource
 			while (resource.getName().startsWith("/")) {
@@ -235,7 +245,7 @@ public class LocalEndpoint extends Endpoint {
 						return;
 					}
 					
-					base = new LocalResource(path[i], true); 
+					base = new LocalResource(path[i], true);
 					base.add(resource);
 					resource = base;
 				}
@@ -243,18 +253,18 @@ public class LocalEndpoint extends Endpoint {
 			this.rootResource.addSubResource(resource);
 		}
 	}
-
+	
 	public void removeResource(String resourceIdentifier) {
-		if (rootResource != null) {
-			rootResource.removeSubResource(resourceIdentifier);
+		if (this.rootResource != null) {
+			this.rootResource.removeSubResource(resourceIdentifier);
 		}
 	}
-
+	
 	@Override
 	public void handleRequest(Request request) {
 		execute(request);
 	}
-
+	
 	@Override
 	public void handleResponse(Response response) {
 		// response.handle();
@@ -267,6 +277,16 @@ public class LocalEndpoint extends Endpoint {
 	 * @return the root resource
 	 */
 	public Resource getRootResource() {
-		return rootResource;
+		return this.rootResource;
+	}
+	
+	@Override
+	public int getPort() {
+		return Communicator.getInstance().getPort(this.mode);
+	}
+	
+	@Override
+	public int getPort(COMMUNICATOR_MODE mode) {
+		return Communicator.getInstance().getPort(mode);
 	}
 }

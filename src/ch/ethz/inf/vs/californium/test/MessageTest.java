@@ -36,7 +36,7 @@ import org.junit.Test;
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.Option;
-import ch.ethz.inf.vs.californium.coap.Message.messageType;
+import ch.ethz.inf.vs.californium.coap.Message.MessageType;
 
 public class MessageTest {
 
@@ -46,7 +46,7 @@ public class MessageTest {
 		Message msg = new Message();
 
 		msg.setCode(CodeRegistry.METHOD_GET);
-		msg.setType(messageType.CON);
+		msg.setType(MessageType.CON);
 		msg.setMID(12345);
 		msg.setPayload("some payload".getBytes());
 
@@ -67,7 +67,7 @@ public class MessageTest {
 		Message msg = new Message();
 
 		msg.setCode(CodeRegistry.METHOD_GET);
-		msg.setType(messageType.CON);
+		msg.setType(MessageType.CON);
 		msg.setMID(12345);
 		msg.setPayload("hallo".getBytes());
 		msg.addOption(new Option("a".getBytes(), 1));
@@ -88,7 +88,7 @@ public class MessageTest {
 		Message msg = new Message();
 
 		msg.setCode(CodeRegistry.METHOD_GET);
-		msg.setType(messageType.CON);
+		msg.setType(MessageType.CON);
 		msg.setMID(12345);
 
 		// msg.addOption(new Option ("a".getBytes(), 1));

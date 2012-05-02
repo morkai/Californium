@@ -33,6 +33,7 @@ package ch.ethz.inf.vs.californium.endpoint;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import ch.ethz.inf.vs.californium.coap.Communicator.COMMUNICATOR_MODE;
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.MessageHandler;
 import ch.ethz.inf.vs.californium.coap.MessageReceiver;
@@ -68,5 +69,9 @@ public abstract class Endpoint implements MessageReceiver, MessageHandler {
 	}
 	
 	public abstract int getPort();
+	
+	public int getPort(COMMUNICATOR_MODE mode) {
+		return getPort();
+	}
 	
 }

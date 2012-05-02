@@ -53,18 +53,18 @@ import ch.ethz.inf.vs.californium.util.Properties;
  * @author Dominique Im Obersteg, Daniel Pauli, and Matthias Kovatsch
  */
 public class UDPLayer extends Layer {
-
-// Members /////////////////////////////////////////////////////////////////////
-
+	
+	// Members /////////////////////////////////////////////////////////////////////
+	
 	// The UDP socket used to send and receive datagrams
 	// TODO Use MulticastSocket
 	private DatagramSocket socket;
-
+	
 	// The thread that listens on the socket for incoming datagrams
 	private ReceiverThread receiverThread;
-
-// Inner Classes ///////////////////////////////////////////////////////////////
-
+	
+	// Inner Classes ///////////////////////////////////////////////////////////////
+	
 	class ReceiverThread extends Thread {
 		
 		public ReceiverThread() {
@@ -75,16 +75,16 @@ public class UDPLayer extends Layer {
 		public void run() {
 			// always listen for incoming datagrams
 			while (true) {
-
+				
 				// allocate buffer
 				byte[] buffer = new byte[Properties.std.getInt("RX_BUFFER_SIZE")+1]; // +1 to check for > RX_BUFFER_SIZE
-
+				
 				// initialize new datagram
 				DatagramPacket datagram = new DatagramPacket(buffer, buffer.length);
-
+				
 				// receive datagram
 				try {
-					socket.receive(datagram);
+					UDPLayer.this.socket.receive(datagram);
 				} catch (IOException e) {
 					LOG.severe("Could not receive datagram: " + e.getMessage());
 					e.printStackTrace();
@@ -96,9 +96,9 @@ public class UDPLayer extends Layer {
 			}
 		}
 	}
-
-// Constructors ////////////////////////////////////////////////////////////////
-
+	
+	// Constructors ////////////////////////////////////////////////////////////////
+	
 	/*
 	 * Constructor for a new UDP layer
 	 * 
@@ -109,24 +109,24 @@ public class UDPLayer extends Layer {
 		// initialize members
 		this.socket = new DatagramSocket(port);
 		this.receiverThread = new ReceiverThread();
-
+		
 		// decide if receiver thread terminates with main thread
-		receiverThread.setDaemon(daemon);
-
+		this.receiverThread.setDaemon(daemon);
+		
 		// start listening right from the beginning
 		this.receiverThread.start();
-
+		
 	}
-
+	
 	/*
 	 * Constructor for a new UDP layer
 	 */
 	public UDPLayer() throws SocketException {
 		this(0, true); // use any available port on the local host machine
 	}
-
-// Commands ////////////////////////////////////////////////////////////////////
-
+	
+	// Commands ////////////////////////////////////////////////////////////////////
+	
 	/*
 	 * Decides if the listener thread persists after the main thread terminates
 	 * 
@@ -134,56 +134,60 @@ public class UDPLayer extends Layer {
 	 * thread terminates. This is useful for e.g. server applications
 	 */
 	public void setDaemon(boolean on) {
-		receiverThread.setDaemon(on);
+		this.receiverThread.setDaemon(on);
 	}
-
-// I/O implementation //////////////////////////////////////////////////////////
-
+	
+	// I/O implementation //////////////////////////////////////////////////////////
+	
 	@Override
 	protected void doSendMessage(Message msg) throws IOException {
-
+		
 		// retrieve payload
 		byte[] payload = msg.toByteArray();
 		
 		// create datagram
 		DatagramPacket datagram = new DatagramPacket(payload, payload.length,
-			msg.getPeerAddress().getAddress(), msg.getPeerAddress().getPort() );
-
+				msg.getPeerAddress().getAddress(), msg.getPeerAddress().getPort() );
+		
 		// remember when this message was sent for the first time
 		// set timestamp only once in order
 		// to handle retransmissions correctly
 		if (msg.getTimestamp() == -1) {
 			msg.setTimestamp(System.nanoTime());
 		}
-
+		
 		// send it over the UDP socket
-		socket.send(datagram);
+		this.socket.send(datagram);
+		//		System.out.println("SEND");
+		//		msg.prettyPrint();
 	}
-
+	
 	@Override
 	protected void doReceiveMessage(Message msg) {
 		
 		// pass message to registered receivers
 		deliverMessage(msg);
+		//		System.out.println("RECEIVE");
+		//		msg.prettyPrint();
 	}
-
-// Internal ////////////////////////////////////////////////////////////////////
-
+	
+	// Internal ////////////////////////////////////////////////////////////////////
+	
 	private void datagramReceived(DatagramPacket datagram) {
-
-		if (datagram.getLength() > 0) {
 		
+		if (datagram.getLength() > 0) {
+			
 			// get current time
 			long timestamp = System.nanoTime();
-	
+			
 			// extract message data from datagram
 			byte[] data = Arrays.copyOfRange(datagram.getData(), datagram.getOffset(), datagram.getLength());
-	
+			
 			// create new message from the received data
 			Message msg = Message.fromByteArray(data);
 			
 			if (msg!=null) {
-	
+				
 				// remember when this message was received
 				msg.setTimestamp(timestamp);
 				
@@ -193,7 +197,7 @@ public class UDPLayer extends Layer {
 					LOG.info(String.format("Marking large datagram for blockwise transfer: %s", msg.key()));
 					msg.requiresBlockwise(true);
 				}
-
+				
 				// protect against unknown exceptions
 				try {
 					
@@ -232,9 +236,9 @@ public class UDPLayer extends Layer {
 			LOG.info(String.format("Dropped empty datagram from: %s:%d", datagram.getAddress().getHostName(), datagram.getPort()));
 		}
 	}
-
-// Queries /////////////////////////////////////////////////////////////////////
-
+	
+	// Queries /////////////////////////////////////////////////////////////////////
+	
 	/*
 	 * Checks whether the listener thread persists after the main thread
 	 * terminates
@@ -243,24 +247,24 @@ public class UDPLayer extends Layer {
 	 * terminates. This is useful for e.g. server applications
 	 */
 	public boolean isDaemon() {
-		return receiverThread.isDaemon();
+		return this.receiverThread.isDaemon();
 	}
-
+	
 	public int getPort() {
-		return socket.getLocalPort();
+		return this.socket.getLocalPort();
 	}
 	
 	public String getStats() {
 		StringBuilder stats = new StringBuilder();
-
+		
 		stats.append("UDP port: ");
 		stats.append(getPort());
 		stats.append('\n');
 		stats.append("Messages sent:     ");
-		stats.append(numMessagesSent);
+		stats.append(this.numMessagesSent);
 		stats.append('\n');
 		stats.append("Messages received: ");
-		stats.append(numMessagesReceived);
+		stats.append(this.numMessagesReceived);
 		
 		return stats.toString();
 	}

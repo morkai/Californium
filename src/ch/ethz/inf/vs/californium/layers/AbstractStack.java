@@ -30,19 +30,17 @@
  ******************************************************************************/
 package ch.ethz.inf.vs.californium.layers;
 
-import java.io.IOException;
 import java.net.SocketException;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import ch.ethz.inf.vs.californium.coap.Message;
 
 /**
  * The Class AbstractStack.
  *
  * @author Francesco Corazza
  */
-public abstract class AbstractStack extends UpperLayer {
+public abstract class AbstractStack extends ForwardLayer {
 	
 	// Static Attributes ///////////////////////////////////////////////////////////
 	
@@ -61,8 +59,6 @@ public abstract class AbstractStack extends UpperLayer {
 	private final Deque<Layer> layerQueue = new LinkedBlockingDeque<Layer>();
 	
 	protected UpperLayer upperLayer = null;
-	
-	protected int actualPort;
 	
 	// Constructors /////////////////////////////////////////////////////////////////////
 	
@@ -151,12 +147,12 @@ public abstract class AbstractStack extends UpperLayer {
 	//		if (upperLayer == null) {
 	//			throw new IllegalArgumentException("upperLayer == null");
 	//		}
-	//		
+	//
 	//		// if the upperLayer is already set it needs to remove it from the deque
 	//		if (this.upperLayer != null) {
 	//			this.layerQueue.remove(upperLayer);
 	//		}
-	//		
+	//
 	//		// put the layer at the beginnign of the deque and link it it with the communicator
 	//		this.layerQueue.addLast(upperLayer);
 	//		upperLayer.setLowerLayer(this);
@@ -185,46 +181,5 @@ public abstract class AbstractStack extends UpperLayer {
 	
 	// I/O implementation //////////////////////////////////////////////////////
 	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * ch.ethz.inf.vs.californium.layers.Layer#doSendMessage(ch.ethz.inf.vs.
-	 * californium.coap.Message)
-	 */
-	@Override
-	protected void doSendMessage(Message msg) throws IOException {
-		LOG.finest(this.getClass().getSimpleName() + " doSendMessage");
-		
-		// defensive programming before entering the stack, lower layers should assume a correct message.
-		if (msg != null) {
-			
-			// check message before sending through the stack
-			if (msg.getPeerAddress().getAddress() == null) {
-				throw new IOException("Remote address not specified");
-			}
-			
-			// delegate to first layer
-			sendMessageOverLowerLayer(msg);
-		}
-	}
-	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * ch.ethz.inf.vs.californium.layers.Layer#doReceiveMessage(ch.ethz.inf.
-	 * vs.californium.coap.Message)
-	 */
-	@Override
-	protected void doReceiveMessage(Message msg) {
-		LOG.finest(this.getClass().getSimpleName() + " doReceiveMessage");
-		
-		// pass message to registered receivers
-		deliverMessage(msg);
-	}
-	
-	public int getPort() {
-		return this.actualPort;
-	}
+	public abstract int getPort();
 }

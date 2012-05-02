@@ -425,7 +425,7 @@ public class PlugtestClient {
 		 *            the actual message type
 		 * @return true, if successful
 		 */
-		protected boolean checkType(Message.messageType expectedMessageType, Message.messageType actualMessageType) {
+		protected boolean checkType(Message.MessageType expectedMessageType, Message.MessageType actualMessageType) {
 			boolean success = expectedMessageType.equals(actualMessageType);
 			
 			if (!success) {
@@ -628,7 +628,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkInt(request.getMID(), response.getMID(), "MID");
 			success &= hasContentType(response);
@@ -663,7 +663,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkInt(request.getMID(), response.getMID(), "MID");
 			
@@ -697,7 +697,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkInt(request.getMID(), response.getMID(), "MID");
 			
@@ -729,7 +729,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkInt(request.getMID(), response.getMID(), "MID");
 			
@@ -761,7 +761,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.NON, response.getType());
+			success &= checkType(Message.MessageType.NON, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= hasContentType(response);
 			
@@ -795,7 +795,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.NON, response.getType());
+			success &= checkType(Message.MessageType.NON, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			
 			return success;
@@ -828,7 +828,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.NON, response.getType());
+			success &= checkType(Message.MessageType.NON, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			
 			return success;
@@ -859,7 +859,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.NON, response.getType());
+			success &= checkType(Message.MessageType.NON, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			
 			return success;
@@ -890,7 +890,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.CON, response.getType());
+			success &= checkType(Message.MessageType.CON, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= hasContentType(response);
 			
@@ -923,7 +923,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkToken(request.getFirstOption(OptionNumberRegistry.TOKEN), response.getFirstOption(OptionNumberRegistry.TOKEN));
 			success &= hasContentType(response);
@@ -957,7 +957,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkToken(new Option(TokenManager.emptyToken, OptionNumberRegistry.TOKEN), response.getFirstOption(OptionNumberRegistry.TOKEN));
 			success &= hasContentType(response);
@@ -990,7 +990,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= hasContentType(response);
 			
@@ -1026,7 +1026,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType()) || checkType(Message.messageType.CON, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType()) || checkType(Message.MessageType.CON, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= hasContentType(response);
 			
@@ -1058,7 +1058,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.NON, response.getType());
+			success &= checkType(Message.MessageType.NON, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= hasContentType(response);
 			
@@ -1090,7 +1090,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkOption(new Option(MediaTypeRegistry.APPLICATION_LINK_FORMAT, OptionNumberRegistry.CONTENT_TYPE), response.getFirstOption(OptionNumberRegistry.CONTENT_TYPE));
 			
@@ -1125,7 +1125,7 @@ public class PlugtestClient {
 		protected boolean checkResponse(Request request, Response response) {
 			boolean success = true;
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkOption(new Option(MediaTypeRegistry.APPLICATION_LINK_FORMAT, OptionNumberRegistry.CONTENT_TYPE), response.getFirstOption(OptionNumberRegistry.CONTENT_TYPE));
 			success &= checkDiscovery(EXPECTED_RT, response.getPayloadString());
@@ -1163,7 +1163,7 @@ public class PlugtestClient {
 			// get actual number of blocks for check
 			int maxNUM = ((BlockOption)response.getFirstOption(OptionNumberRegistry.BLOCK2)).getNUM();
 			
-			success &= checkType(Message.messageType.ACK, response.getType());
+			success &= checkType(Message.MessageType.ACK, response.getType());
 			success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 			success &= checkOption(
 					new BlockOption(OptionNumberRegistry.BLOCK2, maxNUM, BlockOption.encodeSZX(PLUGTEST_BLOCK_SIZE), false),
@@ -1205,7 +1205,7 @@ public class PlugtestClient {
 				// get actual number of blocks for check
 				int maxNUM = ((BlockOption)response.getFirstOption(OptionNumberRegistry.BLOCK2)).getNUM();
 				
-				success &= checkType(Message.messageType.ACK, response.getType());
+				success &= checkType(Message.MessageType.ACK, response.getType());
 				success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 				success &= checkOption(
 						new BlockOption(OptionNumberRegistry.BLOCK2, maxNUM, BlockOption.encodeSZX(PLUGTEST_BLOCK_SIZE), false),
@@ -1258,7 +1258,7 @@ public class PlugtestClient {
 				// get actual number of blocks for check
 				int maxNUM = ((BlockOption)response.getFirstOption(OptionNumberRegistry.BLOCK1)).getNUM();
 				
-				success &= checkType(Message.messageType.ACK, response.getType());
+				success &= checkType(Message.MessageType.ACK, response.getType());
 				success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 				success &= checkOption(
 						new BlockOption(OptionNumberRegistry.BLOCK1, maxNUM, BlockOption.encodeSZX(PLUGTEST_BLOCK_SIZE), false),
@@ -1311,7 +1311,7 @@ public class PlugtestClient {
 				// get actual number of blocks for check
 				int maxNUM = ((BlockOption)response.getFirstOption(OptionNumberRegistry.BLOCK1)).getNUM();
 				
-				success &= checkType(Message.messageType.ACK, response.getType());
+				success &= checkType(Message.MessageType.ACK, response.getType());
 				success &= checkInt(EXPECTED_RESPONSE_CODE, response.getCode(), "code");
 				success &= checkOption(
 						new BlockOption(OptionNumberRegistry.BLOCK1, maxNUM, BlockOption.encodeSZX(PLUGTEST_BLOCK_SIZE), false),

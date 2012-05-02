@@ -35,6 +35,7 @@ import java.net.SocketException;
 
 import ch.ethz.inf.vs.californium.layers.AbstractStack;
 import ch.ethz.inf.vs.californium.layers.DefaultStack;
+import ch.ethz.inf.vs.californium.layers.HttpServerStack;
 import ch.ethz.inf.vs.californium.layers.ProxyStack;
 import ch.ethz.inf.vs.californium.layers.UpperLayer;
 
@@ -60,25 +61,26 @@ public class Communicator extends UpperLayer {
 	
 	public static enum COMMUNICATOR_MODE {
 		DEFAULT, COAP_PROXY, HTTP_TO_COAP_PROXY, COAP_TO_HTTP_PROXY;
-		
 	}
 	
 	private static COMMUNICATOR_MODE mode = COMMUNICATOR_MODE.DEFAULT;
 	
 	private volatile static Communicator singleton = null;
 	
+	//	private HttpClientStack httpClientStack;
+	private HttpServerStack httpServerStack;
 	private ProxyStack proxyStack;
 	private DefaultStack defaultStack;
 	
 	// the following parameters should be externalized in an xml file
 	// and set for each client/server created
-	//	private static int serverHttpPort = 80;
 	//	private static int clientHttpPort = 0;
+	private static int serverHttpPort = 80;
 	private static int defaultUdpPort = 0;
 	private static int proxyUdpPort = 0;
 	private static boolean daemon = false;
 	private static int blockSize = 0;
-	private static int requestPerSecond = 1000;
+	private static int requestPerSecond = 0;
 	
 	
 	public Communicator() {
@@ -89,17 +91,28 @@ public class Communicator extends UpperLayer {
 				case COAP_TO_HTTP_PROXY:
 					//				this.httpClientStack = new HttpClientStack();
 				case HTTP_TO_COAP_PROXY:
-					//				this.httpServerStack = new HttpServerStack();
+					// create the stack
+					this.httpServerStack = new HttpServerStack(serverHttpPort);
 				case COAP_PROXY:
+					// create the stack
 					this.proxyStack = new ProxyStack(proxyUdpPort, blockSize,
 							daemon, requestPerSecond);
+					
+					// register the  communicator as the receiver
+					// (outgoing messages from the proxy stack will be handled by the Communicator)
+					this.proxyStack.registerReceiver(this);
 				case DEFAULT:
+					// create the stack
 					this.defaultStack = new DefaultStack(defaultUdpPort,
 							blockSize, daemon);
+					
+					// default stack is the default lower layer of the Communicator
+					// in this way, the communicator can work as a classic CoAP server
 					setLowerLayer(this.defaultStack);
 					break;
 				default:
 					LOG.severe("Not recognized option mode");
+					// FIXME exception
 					break;
 			}
 		} catch (SocketException e) {
@@ -107,6 +120,7 @@ public class Communicator extends UpperLayer {
 			//FIXME retrow an exception
 		}
 	}
+	
 	
 	public static Communicator getInstance() {
 		
@@ -215,6 +229,9 @@ public class Communicator extends UpperLayer {
 	
 	@Override
 	protected void doSendMessage(Message msg) throws IOException {
+		System.out.println("COMMUNICATOR - SEND TO DEFAULT STACK");
+		//		System.out.println(msg.getPeerAddress());
+		//		msg.prettyPrint();
 		
 		// defensive programming before entering the stack, lower layers should assume a correct message.
 		if (msg != null) {
@@ -226,15 +243,16 @@ public class Communicator extends UpperLayer {
 			
 			// delegate to first layer
 			sendMessageOverLowerLayer(msg);
-			
-			//msg.prettyPrint();
 		}
 	}
 	
 	@Override
 	protected void doReceiveMessage(Message msg) {
+		System.out.println("COMMUNICATOR - RECEIVE FROM DEFAULT STACK");
+		//		System.out.println(msg.getPeerAddress());
+		//		msg.prettyPrint();
 		
-		if (msg instanceof Response) {
+		if (CodeRegistry.isResponse(msg.getCode())) {
 			Response response = (Response) msg;
 			
 			// initiate custom response handling
@@ -243,9 +261,6 @@ public class Communicator extends UpperLayer {
 		
 		// pass message to registered receivers
 		deliverMessage(msg);
-		
-		//msg.prettyPrint();
-		
 	}
 	
 	public AbstractStack getStackForMode(COMMUNICATOR_MODE mode) {
@@ -274,6 +289,19 @@ public class Communicator extends UpperLayer {
 	
 	public int getPort(COMMUNICATOR_MODE mode) {
 		return getStackForMode(mode).getPort();
+	}
+	
+	public void sendMessageOverProxy(Request request) {
+		
+		try {
+			this.proxyStack.sendMessage(request);
+			System.out
+			.println("COMMUNICATOR - FORWARDED MESSAGE TO PROXY STACK");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 }

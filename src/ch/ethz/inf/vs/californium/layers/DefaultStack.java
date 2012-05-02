@@ -57,6 +57,8 @@ import ch.ethz.inf.vs.californium.coap.Request;
  */
 public class DefaultStack extends AbstractStack {
 	
+	private int port;
+
 	public DefaultStack(int udpPort, int transferBlockSize, boolean runAsDaemon)
 			throws SocketException {
 		super(udpPort, transferBlockSize, runAsDaemon);
@@ -90,7 +92,12 @@ public class DefaultStack extends AbstractStack {
 		// enquequeLayer(new AdverseLayer());
 		UDPLayer udpLayer = new UDPLayer(this.udpPort, this.runAsDaemon);
 		enquequeLayer(udpLayer);
-		this.actualPort = udpLayer.getPort();
+		this.port = udpLayer.getPort();
+	}
+	
+	@Override
+	public int getPort() {
+		return this.port;
 	}
 	
 }

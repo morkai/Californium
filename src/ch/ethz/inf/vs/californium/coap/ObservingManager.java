@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import ch.ethz.inf.vs.californium.coap.Message.messageType;
+import ch.ethz.inf.vs.californium.coap.Message.MessageType;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 import ch.ethz.inf.vs.californium.layers.TransactionLayer;
 import ch.ethz.inf.vs.californium.util.Properties;
@@ -134,9 +134,9 @@ public class ObservingManager {
 						
 				// check
 				if (check<=0) {
-					request.setType(messageType.CON);
+					request.setType(MessageType.CON);
 				} else {
-					request.setType(messageType.NON);
+					request.setType(MessageType.NON);
 				}
 				
 				// execute

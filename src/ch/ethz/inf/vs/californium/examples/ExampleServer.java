@@ -66,7 +66,8 @@ public class ExampleServer extends LocalEndpoint {
 	 * <p>
 	 * Add all initial {@link LocalResource}s here.
 	 */
-	public ExampleServer() throws SocketException {
+	public ExampleServer(int port) throws SocketException {
+		super(port);
 		
 		// add resources to the server
 		addResource(new HelloWorldResource());
@@ -86,7 +87,7 @@ public class ExampleServer extends LocalEndpoint {
 	public void handleRequest(Request request) {
 		
 		// Add additional handling like special logging here.
-		request.prettyPrint();
+		//		request.prettyPrint();
 		
 		// dispatch to requested resource
 		super.handleRequest(request);
@@ -96,13 +97,18 @@ public class ExampleServer extends LocalEndpoint {
 	// Application entry point /////////////////////////////////////////////////
 	
 	public static void main(String[] args) {
+		int port = 5683;
+		
+		if (args.length == 1) {
+			port = Integer.parseInt(args[0]);
+		}
 		
 		Log.init();
 		
 		// create server
 		try {
 			
-			Endpoint server = new ExampleServer();
+			Endpoint server = new ExampleServer(port);
 			
 			
 			System.out.printf("ExampleServer listening on port %d.\n",

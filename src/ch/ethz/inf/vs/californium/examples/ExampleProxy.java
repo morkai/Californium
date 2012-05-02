@@ -32,6 +32,7 @@ package ch.ethz.inf.vs.californium.examples;
 
 import java.net.SocketException;
 
+import ch.ethz.inf.vs.californium.coap.Communicator.COMMUNICATOR_MODE;
 import ch.ethz.inf.vs.californium.endpoint.Endpoint;
 import ch.ethz.inf.vs.californium.endpoint.ProxyEndpoint;
 import ch.ethz.inf.vs.californium.util.Log;
@@ -65,6 +66,10 @@ public class ExampleProxy extends ProxyEndpoint {
 			Endpoint proxy = new ExampleProxy();
 			
 			System.out.println("Proxy started");
+			System.out.println("Incoming CoAP port (server): "
+					+ proxy.getPort(COMMUNICATOR_MODE.DEFAULT));
+			System.out.println("Outgoing CoAP port (client): "
+					+ proxy.getPort(COMMUNICATOR_MODE.COAP_PROXY));
 			
 		} catch (SocketException e) {
 			

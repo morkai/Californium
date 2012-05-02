@@ -98,7 +98,7 @@ public class Message {
 	 * 2: Acknowledgment
 	 * 3: Reset
 	 */
-	public enum messageType {
+	public enum MessageType {
 		CON,
 		NON,
 		ACK,
@@ -126,7 +126,7 @@ public class Message {
 	private int version = 1;
 	
 	/** The message type (CON, NON, ACK, or RST). */
-	private messageType type = null;
+	private MessageType type = null;
 	
 	/**
 	 * The message code:
@@ -161,18 +161,18 @@ public class Message {
 	 * @param numeric the type value
 	 * @return
 	 */
-	public static messageType getTypeByValue(int numeric) {
+	public static MessageType getTypeByValue(int numeric) {
 		switch (numeric) {
 			case 0:
-				return messageType.CON;
+				return MessageType.CON;
 			case 1:
-				return messageType.NON;
+				return MessageType.NON;
 			case 2:
-				return messageType.ACK;
+				return MessageType.ACK;
 			case 3:
-				return messageType.RST;
+				return MessageType.RST;
 			default:
-				return messageType.CON;
+				return MessageType.CON;
 		}
 	}
 	
@@ -190,7 +190,7 @@ public class Message {
 	 * @param type the type of the CoAP message
 	 * @param code the code of the CoAP message (See class CodeRegistry)
 	 */
-	public Message(messageType type, int code) {
+	public Message(MessageType type, int code) {
 		this.type = type;
 		this.code = code;
 	}	
@@ -201,7 +201,7 @@ public class Message {
 	 * @param uri the URI of the CoAP message
 	 * @param payload the payload of the CoAP message
 	 */
-	public Message(URI address, messageType type, int code, int mid, byte[] payload) {
+	public Message(URI address, MessageType type, int code, int mid, byte[] payload) {
 		this.setURI(address);
 		this.type = type;
 		this.code = code;
@@ -346,7 +346,7 @@ public class Message {
 		int version = datagram.read(VERSION_BITS); // non-blocking
 		
 		//Read current type
-		messageType type = getTypeByValue(datagram.read(TYPE_BITS));
+		MessageType type = getTypeByValue(datagram.read(TYPE_BITS));
 		
 		//Read number of options
 		int optionCount = datagram.read(OPTIONCOUNT_BITS);
@@ -455,7 +455,7 @@ public class Message {
 	 * @return A new ACK message
 	 */
 	public Message newAccept() {
-		Message ack = new Message(messageType.ACK, CodeRegistry.EMPTY_MESSAGE);
+		Message ack = new Message(MessageType.ACK, CodeRegistry.EMPTY_MESSAGE);
 
 		ack.setPeerAddress( getPeerAddress() );
 		ack.setMID( getMID() );
@@ -485,7 +485,7 @@ public class Message {
 	 */
 	public Message newReject() {
 		
-		Message rst = new Message(messageType.RST, CodeRegistry.EMPTY_MESSAGE);
+		Message rst = new Message(MessageType.RST, CodeRegistry.EMPTY_MESSAGE);
 		
 		rst.setPeerAddress( getPeerAddress() );
 		rst.setMID( getMID() );
@@ -512,10 +512,10 @@ public class Message {
 		Message reply = new Message();
 		
 		// set message type
-		if (type == messageType.CON) {
-			reply.type = ack ? messageType.ACK : messageType.RST;
+		if (type == MessageType.CON) {
+			reply.type = ack ? MessageType.ACK : MessageType.RST;
 		} else {
-			reply.type = messageType.NON;
+			reply.type = MessageType.NON;
 		}
 		
 		// echo the message ID
@@ -843,7 +843,7 @@ public class Message {
 	 * 
 	 * @return the current type
 	 */
-	public messageType getType() {
+	public MessageType getType() {
 		return this.type;
 	}
 	
@@ -852,7 +852,7 @@ public class Message {
 	 * 
 	 * @param msgType the type for the message
 	 */
-	public void setType(messageType msgType) {
+	public void setType(MessageType msgType) {
 		this.type = msgType;
 	}
 
@@ -1040,19 +1040,19 @@ public class Message {
 	}
 	
 	public boolean isConfirmable() {
-		return this.type == messageType.CON;
+		return this.type == MessageType.CON;
 	}
 	
 	public boolean isNonConfirmable() {
-		return this.type == messageType.NON;
+		return this.type == MessageType.NON;
 	}
 	
 	public boolean isAcknowledgement() {
-		return this.type == messageType.ACK;
+		return this.type == MessageType.ACK;
 	}
 	
 	public boolean isReset() {
-		return this.type == messageType.RST;
+		return this.type == MessageType.RST;
 	}
 	
 	public boolean isReply() {

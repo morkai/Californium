@@ -83,7 +83,7 @@ public class Request extends Message {
 	 * @param confirmable True if the request is to be sent as a confirmable
 	 */
 	public Request(int method, boolean confirmable) {
-		super(confirmable ? messageType.CON : messageType.NON, method);
+		super(confirmable ? MessageType.CON : MessageType.NON, method);
 	}
 
 // Methods /////////////////////////////////////////////////////////////////////
@@ -140,7 +140,7 @@ public class Request extends Message {
 		if (response.getType() == null) {
 			if (responseCount == 0 && isConfirmable()) {
 				// use piggy-backed response
-				response.setType(messageType.ACK);
+				response.setType(MessageType.ACK);
 			} else {
 				// use separate response:
 				// Confirmable response to confirmable request,

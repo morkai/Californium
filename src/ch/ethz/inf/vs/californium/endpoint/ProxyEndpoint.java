@@ -6,9 +6,8 @@ package ch.ethz.inf.vs.californium.endpoint;
 import java.net.SocketException;
 
 import ch.ethz.inf.vs.californium.coap.Communicator;
-import ch.ethz.inf.vs.californium.examples.resources.ProxyResource;
-import ch.ethz.inf.vs.californium.examples.resources.RDResource;
-import ch.ethz.inf.vs.californium.layers.ProxyStack;
+import ch.ethz.inf.vs.californium.coap.Communicator.COMMUNICATOR_MODE;
+import ch.ethz.inf.vs.californium.util.Properties;
 
 /**
  * The class represent the container of the resources and the layers used by the proxy.
@@ -19,16 +18,23 @@ import ch.ethz.inf.vs.californium.layers.ProxyStack;
  */
 public class ProxyEndpoint extends LocalEndpoint {
 	
-	//	private Set<Integer> directMessages = new HashSet<Integer>();
-	private ProxyStack proxyStack;
-	
-	public ProxyEndpoint() throws SocketException {
-		// initialize the Communicator with the default stack
-		super();
+	public ProxyEndpoint(int serverUdpPort, int defaultBlockSze,
+			boolean daemon, int requestPerSecond, int clientUdpPort)
+					throws SocketException {
+		super(true); // the boolean is only a placeholder to choose a different constructor from LocalEndpoint
+		// TODO the constructor must not call super()
 		
-		// initialize the proxyStack
-		this.proxyStack = new ProxyStack();
-		Communicator.getInstance().setLowerLayer(this.proxyStack);
+		this.mode = COMMUNICATOR_MODE.COAP_PROXY;
+		
+		// initialize communicator and register the endpoint as a receiver
+		Communicator.setMode(this.mode);
+		Communicator.setDefaultUdpPort(serverUdpPort);
+		Communicator.setBlockSize(defaultBlockSze);
+		Communicator.setDaemon(daemon);
+		Communicator.setProxyUdpPort(clientUdpPort);
+		Communicator.setRequestPerSecond(requestPerSecond);
+		
+		Communicator.getInstance().registerReceiver(this);
 		
 		// add the proxying resource to manage the incoming request
 		addResource(new ProxyResource());
@@ -37,6 +43,9 @@ public class ProxyEndpoint extends LocalEndpoint {
 		addResource(new RDResource());
 	}
 	
+	public ProxyEndpoint() throws SocketException {
+		this(Properties.std.getInt("DEFAULT_PORT"), 0, false, 0, 0);
+	}
 	
 	//	@Override
 	//	public void visit(Request request) {

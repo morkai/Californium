@@ -64,13 +64,13 @@ import ch.ethz.inf.vs.californium.endpoint.LocalResource;
 public class ZurichWeatherResource extends LocalResource {
 	
 	public static final int WEATHER_MAX_AGE = 300000; // 5min
-
+	
 	// The current weather information represented as string
 	private String weatherXML;
 	private String weatherPLAIN;
 	
 	private List<Integer> supported = new ArrayList<Integer>();
-
+	
 	/*
 	 * Constructor for a new ZurichWeatherResource
 	 */
@@ -80,28 +80,30 @@ public class ZurichWeatherResource extends LocalResource {
 		setResourceType("ZurichWeather");
 		isObservable(true);
 		
-		supported.add(MediaTypeRegistry.TEXT_PLAIN);
-		supported.add(MediaTypeRegistry.APPLICATION_XML);
-
-		for (int ct : supported) {
+		this.supported.add(MediaTypeRegistry.TEXT_PLAIN);
+		this.supported.add(MediaTypeRegistry.APPLICATION_XML);
+		
+		for (int ct : this.supported) {
 			setContentTypeCode(ct);
 		}
 		
 		getZurichWeather();
-		
-		// Set timer task scheduling
-		Timer timer = new Timer();
-		timer.schedule(new ZurichWeatherTask(), 0, WEATHER_MAX_AGE);
+		if ((this.weatherPLAIN != null) && !this.weatherPLAIN.isEmpty()) {
+			
+			// Set timer task scheduling
+			Timer timer = new Timer();
+			timer.schedule(new ZurichWeatherTask(), 0, WEATHER_MAX_AGE);
+		}
 	}
-
+	
 	private class ZurichWeatherTask extends TimerTask {
 		@Override
 		public void run() {
-			String weatherOLD = new String(weatherXML);
+			String weatherOLD = new String(ZurichWeatherResource.this.weatherXML);
 			
 			getZurichWeather();
 			
-			if (!weatherOLD.equals(weatherXML)) {
+			if (!weatherOLD.equals(ZurichWeatherResource.this.weatherXML)) {
 				changed();
 			}
 		}
@@ -110,28 +112,28 @@ public class ZurichWeatherResource extends LocalResource {
 	private void getZurichWeather() {
 		URL url;
 		String rawWeather = "";
-
+		
 		try {
 			url = new URL("http://weather.yahooapis.com/forecastrss?w=12893366");
 			
-	        BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
-	        
-	        String inputLine;
-	        while ((inputLine = in.readLine()) != null) {
-	        	rawWeather += inputLine + "\n";
-	        }
-	        in.close();
+			BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+			
+			String inputLine;
+			while ((inputLine = in.readLine()) != null) {
+				rawWeather += inputLine + "\n";
+			}
+			in.close();
 			
 		} catch (IOException e) {
 			System.err.println("getZurichWeather IOException");
 			e.printStackTrace();
 		}
 		
-		weatherPLAIN = parseWeatherXML(rawWeather);
-		weatherXML = rawWeather;
-
+		this.weatherPLAIN = parseWeatherXML(rawWeather);
+		this.weatherXML = rawWeather;
+		
 	}
-
+	
 	/*
 	 * Parses a given string describing an XML document
 	 */
@@ -154,7 +156,7 @@ public class ZurichWeatherResource extends LocalResource {
 		}
 		return result;
 	}
-
+	
 	/*
 	 * Traverses the XML structure and parses relevant data
 	 * 
@@ -163,10 +165,10 @@ public class ZurichWeatherResource extends LocalResource {
 	 * @return A formatted string containing the parsed data
 	 */
 	private String traverseXMLTree(Node node) {
-
+		
 		// Use stringbuilder to build result string more efficiently
 		StringBuilder weatherResult = new StringBuilder();
-
+		
 		// Get location information
 		if (node.getNodeName().equals("yweather:location")) {
 			weatherResult.append("------------------------");
@@ -178,14 +180,14 @@ public class ZurichWeatherResource extends LocalResource {
 			for (int j = 0; j < node.getAttributes().getLength(); j++) {
 				weatherResult.append("   ");
 				weatherResult
-						.append(node.getAttributes().item(j).getNodeName());
+				.append(node.getAttributes().item(j).getNodeName());
 				weatherResult.append(": ");
 				weatherResult.append(node.getAttributes().item(j)
 						.getNodeValue());
 				weatherResult.append("\n");
 			}
 			weatherResult.append("------------------------\n\n");
-
+			
 			// Get unit information
 		} else if (node.getNodeName().equals("yweather:units")) {
 			weatherResult.append("------------------------");
@@ -197,14 +199,14 @@ public class ZurichWeatherResource extends LocalResource {
 			for (int j = 0; j < node.getAttributes().getLength(); j++) {
 				weatherResult.append("   ");
 				weatherResult
-						.append(node.getAttributes().item(j).getNodeName());
+				.append(node.getAttributes().item(j).getNodeName());
 				weatherResult.append(": ");
 				weatherResult.append(node.getAttributes().item(j)
 						.getNodeValue());
 				weatherResult.append("\n");
 			}
 			weatherResult.append("------------------------\n\n");
-
+			
 			// Get weather forecast information
 		} else if (node.getNodeName().equals("yweather:forecast")) {
 			weatherResult.append("-----------------------------");
@@ -221,7 +223,7 @@ public class ZurichWeatherResource extends LocalResource {
 			for (int j = 2; j < node.getAttributes().getLength(); j++) {
 				weatherResult.append("   ");
 				weatherResult
-						.append(node.getAttributes().item(j).getNodeName());
+				.append(node.getAttributes().item(j).getNodeName());
 				weatherResult.append(": ");
 				weatherResult.append(node.getAttributes().item(j)
 						.getNodeValue());
@@ -229,7 +231,7 @@ public class ZurichWeatherResource extends LocalResource {
 			}
 			weatherResult.append("-----------------------------\n\n");
 		}
-
+		
 		// Further traverse tree if children are available
 		if (node.hasChildNodes()) {
 			NodeList children = node.getChildNodes();
@@ -239,13 +241,13 @@ public class ZurichWeatherResource extends LocalResource {
 		}
 		return weatherResult.toString();
 	}
-
+	
 	@Override
 	public void performGET(GETRequest request) {
-
+		
 		int ct = MediaTypeRegistry.TEXT_PLAIN;
 		// content negotiation
-		if ((ct = MediaTypeRegistry.contentNegotiation(ct,  supported, request.getOptions(OptionNumberRegistry.ACCEPT)))==MediaTypeRegistry.UNDEFINED) {
+		if ((ct = MediaTypeRegistry.contentNegotiation(ct,  this.supported, request.getOptions(OptionNumberRegistry.ACCEPT)))==MediaTypeRegistry.UNDEFINED) {
 			request.respond(CodeRegistry.RESP_NOT_ACCEPTABLE, "Supports text/plain and application/xml");
 			return;
 		}
@@ -256,9 +258,9 @@ public class ZurichWeatherResource extends LocalResource {
 		// Get Weather, either in plain text or as xml, depending on how it
 		// has been requested
 		if (ct==MediaTypeRegistry.APPLICATION_XML) {
-			response.setPayload(weatherXML, MediaTypeRegistry.APPLICATION_XML);
+			response.setPayload(this.weatherXML, MediaTypeRegistry.APPLICATION_XML);
 		} else {
-			response.setPayload(weatherPLAIN, MediaTypeRegistry.TEXT_PLAIN);
+			response.setPayload(this.weatherPLAIN, MediaTypeRegistry.TEXT_PLAIN);
 		}
 		
 		request.respond(response);
