@@ -28,13 +28,19 @@
  * 
  * This file is part of the Californium (Cf) CoAP framework.
  ******************************************************************************/
-package ch.ethz.inf.vs.californium.layers;
+package ch.ethz.inf.vs.californium.layers.stacks;
 
 import java.net.SocketException;
 
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.MessageReceiver;
 import ch.ethz.inf.vs.californium.coap.Request;
+import ch.ethz.inf.vs.californium.layers.MatchingLayer;
+import ch.ethz.inf.vs.californium.layers.TokenLayer;
+import ch.ethz.inf.vs.californium.layers.TransactionLayer;
+import ch.ethz.inf.vs.californium.layers.TransferLayer;
+import ch.ethz.inf.vs.californium.layers.UDPLayer;
+import ch.ethz.inf.vs.californium.layers.UpperLayer;
 
 /**
  * The class DefaultStack provides the message passing system and builds the
@@ -80,7 +86,6 @@ public class DefaultStack extends AbstractStack {
 	public DefaultStack() throws SocketException {
 		super();
 	}
-	
 	
 	@Override
 	protected void createStack() throws SocketException {

@@ -70,6 +70,8 @@ public class ExampleProxy extends ProxyEndpoint {
 					+ proxy.getPort(COMMUNICATOR_MODE.DEFAULT));
 			System.out.println("Outgoing CoAP port (client): "
 					+ proxy.getPort(COMMUNICATOR_MODE.COAP_PROXY));
+			System.out.println("Outgoing HTTP port (server): "
+					+ proxy.getPort(COMMUNICATOR_MODE.HTTP_TO_COAP_PROXY));
 			
 		} catch (SocketException e) {
 			

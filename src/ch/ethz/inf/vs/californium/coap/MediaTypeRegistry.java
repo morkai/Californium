@@ -34,7 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 
 /*
- * This class describes the CoAP Media Type Registry as defined in 
+ * This class describes the CoAP Media Type Registry as defined in
  * draft-ietf-core-coap-07, section 11.3
  * 
  * @author Dominique Im Obersteg & Daniel Pauli
@@ -42,7 +42,7 @@ import java.util.List;
  * 
  */
 public class MediaTypeRegistry {
-
+	
 	// Constants ///////////////////////////////////////////////////////////////
 	public static final int TEXT_PLAIN = 0;
 	public static final int TEXT_XML = 1;
@@ -66,7 +66,7 @@ public class MediaTypeRegistry {
 	public static final int APPLICATION_SOAP_FASTINFOSET = 49; // 04
 	public static final int APPLICATION_JSON = 50; // 04
 	public static final int APPLICATION_X_OBIX_BINARY = 51; // 04
-
+	
 	// implementation specific
 	public static final int UNDEFINED         = -1;
 	
@@ -101,11 +101,11 @@ public class MediaTypeRegistry {
 	}
 	
 	// Static Functions ////////////////////////////////////////////////////////
-
+	
 	private static void add(int mediaType, String string, String extension) {
 		registry.put(mediaType, new String[]{string, extension});
 	}
-
+	
 	public static String toString(int mediaType) {
 		String texts[] = registry.get(mediaType);
 		
@@ -116,6 +116,20 @@ public class MediaTypeRegistry {
 		}
 	}
 	
+	public static int parse(String type) {
+		if (type == null) {
+			return UNDEFINED;
+		}
+		
+		for (Integer key : registry.keySet()) {
+			if (registry.get(key)[0].equalsIgnoreCase(type)) {
+				return key;
+			}
+		}
+		
+		return UNDEFINED;
+	}
+
 	public static String toFileExtension(int mediaType) {
 		String texts[] = registry.get(mediaType);
 		
@@ -128,34 +142,34 @@ public class MediaTypeRegistry {
 	
 	public static boolean isPrintable(int mediaType) {
 		switch (mediaType) {
-		case TEXT_PLAIN:
-		case TEXT_XML:
-		case TEXT_CSV:
-		case TEXT_HTML:
-		case APPLICATION_LINK_FORMAT:
-		case APPLICATION_XML:
-		case APPLICATION_RDF_XML:
-		case APPLICATION_SOAP_XML:
-		case APPLICATION_ATOM_XML:
-		case APPLICATION_XMPP_XML:
-		case APPLICATION_JSON:
-		
-		case UNDEFINED:
-			return true;
-			
-		case IMAGE_GIF:
-		case IMAGE_JPEG:
-		case IMAGE_PNG:
-		case IMAGE_TIFF:
-		case AUDIO_RAW:
-		case VIDEO_RAW:
-		case APPLICATION_OCTET_STREAM:
-		case APPLICATION_EXI:
-		case APPLICATION_FASTINFOSET:
-		case APPLICATION_SOAP_FASTINFOSET:
-		case APPLICATION_X_OBIX_BINARY:
-		default:
-			return false;
+			case TEXT_PLAIN:
+			case TEXT_XML:
+			case TEXT_CSV:
+			case TEXT_HTML:
+			case APPLICATION_LINK_FORMAT:
+			case APPLICATION_XML:
+			case APPLICATION_RDF_XML:
+			case APPLICATION_SOAP_XML:
+			case APPLICATION_ATOM_XML:
+			case APPLICATION_XMPP_XML:
+			case APPLICATION_JSON:
+				
+			case UNDEFINED:
+				return true;
+				
+			case IMAGE_GIF:
+			case IMAGE_JPEG:
+			case IMAGE_PNG:
+			case IMAGE_TIFF:
+			case AUDIO_RAW:
+			case VIDEO_RAW:
+			case APPLICATION_OCTET_STREAM:
+			case APPLICATION_EXI:
+			case APPLICATION_FASTINFOSET:
+			case APPLICATION_SOAP_FASTINFOSET:
+			case APPLICATION_X_OBIX_BINARY:
+			default:
+				return false;
 		}
 	}
 	

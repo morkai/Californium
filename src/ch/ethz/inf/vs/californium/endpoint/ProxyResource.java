@@ -3,17 +3,19 @@
  */
 package ch.ethz.inf.vs.californium.endpoint;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.Communicator;
 import ch.ethz.inf.vs.californium.coap.DELETERequest;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
+import ch.ethz.inf.vs.californium.coap.MediaTypeRegistry;
 import ch.ethz.inf.vs.californium.coap.POSTRequest;
 import ch.ethz.inf.vs.californium.coap.PUTRequest;
 import ch.ethz.inf.vs.californium.coap.Request;
-import ch.ethz.inf.vs.californium.http.MessageTranslator;
+import ch.ethz.inf.vs.californium.coap.Response;
+import ch.ethz.inf.vs.californium.util.CoapTranslator;
 
 /**
  * @author Francesco Corazza
@@ -21,14 +23,11 @@ import ch.ethz.inf.vs.californium.http.MessageTranslator;
  */
 public class ProxyResource extends LocalResource {
 	
-	private final Map<String, Integer> resourceMap = new HashMap<String, Integer>();
-	private final Map<String, Integer> addressMap = new HashMap<String, Integer>();
-	
 	public ProxyResource() {
 		super("proxy");
 		setTitle("Forward the requests to a CoAP server");
 		setResourceType("Proxy");
-		isObservable(false);
+		isObservable(true); //TODO
 	}
 	
 	@Override
@@ -57,73 +56,64 @@ public class ProxyResource extends LocalResource {
 	 * @param request
 	 */
 	private void handleRequest(Request request) {
-		// forward only iff the option proxy-uri is set
-		if (MessageTranslator.isProxyUriSet(request)) {
+		
+		// forward the message iff the option proxy-uri is set
+		if (CoapTranslator.isProxyUriSet(request)) {
 			
-			setStats(request);
+			Request forwardedRequest = null;
+			try {
+				// create a new request to forward
+				forwardedRequest = CoapTranslator
+						.newRequestFromProxyUri(request);
+				
+				// enable response queue for synchronous I/O
+				forwardedRequest.enableResponseQueue(true);
+				
+				// execute the request
+				forwardedRequest.execute();
+			} catch (URISyntaxException e) {
+				LOG.warning("Proxy-uri option malformed: " + e.getMessage());
+				//				msg.respond(CodeRegistry.RESP_BAD_OPTION); // TODO check the error
+			} catch (IOException e) {
+				System.err.println("Failed to execute request: "
+						+ e.getMessage());
+				//				System.exit(-1);
+			}
 			
-			// call the communicator to forward the request to the proxy stack
-			Communicator.getInstance().sendMessageOverProxy(request);
-			System.out
-			.println("PROXY RESOURCE - REQUEST FORWARDED TO PROXY STACK");
+			try {
+				// receive the forwarded response
+				Response forwardedResponse = forwardedRequest.receiveResponse();
+				if (forwardedResponse != null) {
+					// response received, create the real response for the request
+					Response response = CoapTranslator
+							.newResponseFromForwardedMessage(request,
+									forwardedResponse);
+					
+					// complete the request
+					request.respond(response);
+				} else {
+					// transaction timeout occurred
+					System.out.println("No response received.");
+					//TODO
+				}
+			} catch (InterruptedException e) {
+				System.err.println("Receiving of response interrupted: "
+						+ e.getMessage());
+				//				System.exit(-1); TODO
+			}
+			// TODO check options of the response
+			
 		} else {
 			// otherwise the request is directed to the resource /proxy for other purposes
-			String payload = getStats(request);
-			request.respond(CodeRegistry.RESP_CONTENT,
-					payload);
+			if (request instanceof GETRequest) {
+				String payload = Communicator.getInstance()
+						.getProxyingStatistics();
+				request.respond(CodeRegistry.RESP_CONTENT, payload,
+						MediaTypeRegistry.TEXT_PLAIN);
+			} else {
+				// POST and PUT are not allowed
+				request.respond(CodeRegistry.RESP_METHOD_NOT_ALLOWED);
+			}
 		}
-	}
-	
-	/**
-	 * @param request
-	 * @return
-	 */
-	private String getStats(Request request) {
-		StringBuilder builder = new StringBuilder();
-		builder.append("Direct " + CodeRegistry.toString(request.getCode())
-				+ " request for /proxy resource\n");
-		builder.append("Addresses served: " + this.addressMap.size() + "\n");
-		for (String key : this.addressMap.keySet()) {
-			builder.append("Host: " + key + " requests: "
-					+ this.addressMap.get(key)
-					+ " times\n");
-		}
-		builder.append("Resources requested: " + this.resourceMap.size() + "\n");
-		for (String key : this.resourceMap.keySet()) {
-			builder.append("Resource " + key + " requested: "
-					+ this.resourceMap.get(key)
-					+ " times\n");
-		}
-		return builder.toString();
-	}
-	
-	/**
-	 * @param request
-	 */
-	private void setStats(Request request) {
-		String addressString = request.getPeerAddress().toString();
-		String resourceString = MessageTranslator.getProxyUri(request);
-		
-		// get the count of request forwarded to the resource and from the specific address
-		Integer resourceCount = this.resourceMap.get(resourceString);
-		Integer addressCount = this.addressMap.get(addressString);
-		
-		// initialize the value
-		if (resourceCount == null) {
-			resourceCount = new Integer(0);
-		}
-		if (addressCount == null) {
-			addressCount = new Integer(0);
-		}
-		
-		// increment the counter
-		resourceCount++;
-		addressCount++;
-		
-		// add the count to the map
-		this.resourceMap
-		.put(resourceString, resourceCount);
-		this.addressMap.put(addressString, addressCount);
-		
 	}
 }

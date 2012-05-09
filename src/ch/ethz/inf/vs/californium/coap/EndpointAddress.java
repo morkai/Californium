@@ -44,20 +44,20 @@ import ch.ethz.inf.vs.californium.util.Properties;
  * @author Matthias Kovatsch
  */
 public class EndpointAddress {
-
-// Logging /////////////////////////////////////////////////////////////////////
+	
+	// Logging /////////////////////////////////////////////////////////////////////
 	
 	protected static final Logger LOG = Logger.getLogger(EndpointAddress.class.getName());
-
-// Members /////////////////////////////////////////////////////////////////////
+	
+	// Members /////////////////////////////////////////////////////////////////////
 	
 	/** The address. */
 	private InetAddress address = null;
 	
 	/** The port. */
 	private int port = Properties.std.getInt("DEFAULT_PORT");
-
-// Constructors ////////////////////////////////////////////////////////////////
+	
+	// Constructors ////////////////////////////////////////////////////////////////
 	
 	/**
 	 * Instantiates a new endpoint address using the default port.
@@ -91,14 +91,17 @@ public class EndpointAddress {
 		} catch (UnknownHostException e) {
 			LOG.warning(String.format("Cannot fully initialize: %s", e.getMessage()));
 		}
-		if (uri.getPort()!=-1) this.port = uri.getPort();
+		if (uri.getPort()!=-1) {
+			this.port = uri.getPort();
+		}
 	}
-
-// Methods /////////////////////////////////////////////////////////////////////
+	
+	// Methods /////////////////////////////////////////////////////////////////////
 	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
+	@Override
 	public String toString() {
 		if (this.address instanceof Inet6Address) {
 			return String.format("[%s]:%d", this.address.getHostAddress(), this.port);
@@ -124,4 +127,13 @@ public class EndpointAddress {
 	public int getPort() {
 		return this.port;
 	}
+	
+	/**
+	 * Returns a boolean stating if the current endpoint has a not null address
+	 * @return isInitialized
+	 */
+	public boolean isInitialized() {
+		return this.address != null;
+	}
+	
 }

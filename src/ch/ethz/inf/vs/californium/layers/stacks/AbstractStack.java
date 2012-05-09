@@ -28,19 +28,23 @@
  * 
  * This file is part of the Californium (Cf) CoAP framework.
  ******************************************************************************/
-package ch.ethz.inf.vs.californium.layers;
+package ch.ethz.inf.vs.californium.layers.stacks;
 
+import java.io.IOException;
 import java.net.SocketException;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import ch.ethz.inf.vs.californium.coap.Message;
+import ch.ethz.inf.vs.californium.layers.Layer;
+import ch.ethz.inf.vs.californium.layers.UpperLayer;
 
 /**
  * The Class AbstractStack.
  *
  * @author Francesco Corazza
  */
-public abstract class AbstractStack extends ForwardLayer {
+public abstract class AbstractStack extends UpperLayer {
 	
 	// Static Attributes ///////////////////////////////////////////////////////////
 	
@@ -87,8 +91,7 @@ public abstract class AbstractStack extends ForwardLayer {
 		this(udpPort, 0, runAsDaemon);
 	}
 	
-	public AbstractStack(boolean runAsDaemon) throws SocketException {
-		this(0, runAsDaemon);
+	public AbstractStack(boolean fake) {
 	}
 	
 	public AbstractStack(int udpPort) throws SocketException {
@@ -179,7 +182,30 @@ public abstract class AbstractStack extends ForwardLayer {
 	}
 	
 	
-	// I/O implementation //////////////////////////////////////////////////////
-	
 	public abstract int getPort();
+	
+	@Override
+	protected void doSendMessage(Message msg) throws IOException {
+		LOG.finest(this.getClass().getSimpleName() + " doSendMessage");
+		
+		// defensive programming before entering the stack, lower layers should assume a correct message.
+		if (msg != null) {
+			
+			// check message before sending through the stack
+			if (msg.getPeerAddress().getAddress() == null) {
+				throw new IOException("Remote address not specified");
+			}
+			
+			// delegate to first layer
+			sendMessageOverLowerLayer(msg);
+		}
+	}
+	
+	@Override
+	protected void doReceiveMessage(Message msg) {
+		LOG.finest(this.getClass().getSimpleName() + " doReceiveMessage");
+		
+		// pass message to registered receivers
+		deliverMessage(msg);
+	}
 }
