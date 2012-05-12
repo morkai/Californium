@@ -56,46 +56,12 @@ public class UDPLayer extends Layer {
 	
 	// Members /////////////////////////////////////////////////////////////////////
 	
-	// The UDP socket used to send and receive datagrams
+	/** The UDP socket used to send and receive datagrams */
 	// TODO Use MulticastSocket
 	private DatagramSocket socket;
 	
-	// The thread that listens on the socket for incoming datagrams
+	/** The thread that listens on the socket for incoming datagrams */
 	private ReceiverThread receiverThread;
-	
-	// Inner Classes ///////////////////////////////////////////////////////////////
-	
-	class ReceiverThread extends Thread {
-		
-		public ReceiverThread() {
-			super("ReceiverThread");
-		}
-		
-		@Override
-		public void run() {
-			// always listen for incoming datagrams
-			while (true) {
-				
-				// allocate buffer
-				byte[] buffer = new byte[Properties.std.getInt("RX_BUFFER_SIZE")+1]; // +1 to check for > RX_BUFFER_SIZE
-				
-				// initialize new datagram
-				DatagramPacket datagram = new DatagramPacket(buffer, buffer.length);
-				
-				// receive datagram
-				try {
-					UDPLayer.this.socket.receive(datagram);
-				} catch (IOException e) {
-					LOG.severe("Could not receive datagram: " + e.getMessage());
-					e.printStackTrace();
-					continue;
-				}
-				
-				// TODO: Dispatch to worker thread
-				datagramReceived(datagram);
-			}
-		}
-	}
 	
 	// Constructors ////////////////////////////////////////////////////////////////
 	
@@ -105,10 +71,11 @@ public class UDPLayer extends Layer {
 	 * @param port The local UDP port to listen for incoming messages
 	 * @param daemon True if receiver thread should terminate with main thread
 	 */
-	public UDPLayer(int port, boolean daemon) throws SocketException {
+	public UDPLayer(int port, boolean daemon, String stackName)
+			throws SocketException {
 		// initialize members
 		this.socket = new DatagramSocket(port);
-		this.receiverThread = new ReceiverThread();
+		this.receiverThread = new ReceiverThread(stackName);
 		
 		// decide if receiver thread terminates with main thread
 		this.receiverThread.setDaemon(daemon);
@@ -116,6 +83,10 @@ public class UDPLayer extends Layer {
 		// start listening right from the beginning
 		this.receiverThread.start();
 		
+	}
+	
+	public UDPLayer(int port, boolean daemon) throws SocketException {
+		this(port, daemon, "default");
 	}
 	
 	/*
@@ -268,4 +239,40 @@ public class UDPLayer extends Layer {
 		
 		return stats.toString();
 	}
+	
+	// Inner Classes ///////////////////////////////////////////////////////////////
+	
+	class ReceiverThread extends Thread {
+		
+		public ReceiverThread(String stackName) {
+			super("ReceiverThread " + stackName);
+		}
+		
+		@Override
+		public void run() {
+			// always listen for incoming datagrams
+			while (true) {
+				
+				// allocate buffer
+				byte[] buffer = new byte[Properties.std
+				                         .getInt("RX_BUFFER_SIZE") + 1]; // +1 to check for > RX_BUFFER_SIZE
+				
+				// initialize new datagram
+				DatagramPacket datagram = new DatagramPacket(buffer,
+						buffer.length);
+				
+				// receive datagram
+				try {
+					UDPLayer.this.socket.receive(datagram);
+				} catch (IOException e) {
+					LOG.severe("Could not receive datagram: " + e.getMessage());
+					e.printStackTrace();
+					continue;
+				}
+				
+				datagramReceived(datagram);
+			}
+		}
+	}
+	
 }

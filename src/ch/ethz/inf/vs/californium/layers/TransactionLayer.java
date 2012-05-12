@@ -31,11 +31,11 @@
 package ch.ethz.inf.vs.californium.layers;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.ObservingManager;
@@ -60,25 +60,13 @@ public class TransactionLayer extends UpperLayer {
 	/** The message ID used for newly generated messages. */
 	private static int currentMID = (int) (Math.random() * 0x10000);
 	
-	/**
-	 * Returns the next message ID to use out of the consecutive 16-bit range.
-	 * 
-	 * @return the current message ID
-	 */
-	public static int nextMessageID() {
-		
-		currentMID = ++currentMID % 0x10000;
-		
-		return currentMID;
-	}
-	
 	// Members /////////////////////////////////////////////////////////////////////
 	
 	/** The timer daemon to schedule retransmissions. */
 	private Timer timer = new Timer(true); // run as daemon
 	
 	/** The Table to store the transactions of outgoing messages. */
-	private Map<String, Transaction> transactionTable = new HashMap<String, Transaction>();
+	private Map<String, Transaction> transactionTable = new ConcurrentHashMap<String, Transaction>();
 	
 	/** The cache for duplicate detection. */
 	private MessageCache dupCache = new MessageCache();
@@ -368,6 +356,18 @@ public class TransactionLayer extends UpperLayer {
 		this.timer.schedule(transaction.retransmitTask, transaction.timeout);
 	}
 	
+	/**
+	 * Returns the next message ID to use out of the consecutive 16-bit range.
+	 * 
+	 * @return the current message ID
+	 */
+	public static int nextMessageID() {
+		
+		currentMID = ++currentMID % 0x10000;
+		
+		return currentMID;
+	}
+
 	public String getStats() {
 		StringBuilder stats = new StringBuilder();
 		

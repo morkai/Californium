@@ -32,228 +32,298 @@ package ch.ethz.inf.vs.californium.examples;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Vector;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-import ch.ethz.inf.vs.californium.coap.CodeRegistry;
-import ch.ethz.inf.vs.californium.coap.Communicator;
-import ch.ethz.inf.vs.californium.coap.DELETERequest;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
-import ch.ethz.inf.vs.californium.coap.POSTRequest;
-import ch.ethz.inf.vs.californium.coap.PUTRequest;
+import ch.ethz.inf.vs.californium.coap.Option;
+import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
 import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.coap.Response;
 import ch.ethz.inf.vs.californium.coap.TokenManager;
 import ch.ethz.inf.vs.californium.util.Log;
 
-/**
- * This class implements a simple CoAP client for testing purposes. Usage:
- * <p>
- * {@code java -jar SampleClient.jar [-l] METHOD URI [PAYLOAD]}
- * <ul>
- * <li>METHOD: {GET, POST, PUT, DELETE, DISCOVER, OBSERVE}
- * <li>URI: The URI to the remote endpoint or resource}
- * <li>PAYLOAD: The data to send with the request}
- * </ul>
- * Options:
- * <ul>
- * <li>-l: Loop for multiple responses}
- * </ul>
- * Examples:
- * <ul>
- * <li>{@code SampleClient DISCOVER coap://localhost}
- * <li>{@code SampleClient POST coap://someServer.org:5683 my data}
- * </ul>
- * 
- * @author Dominique Im Obersteg, Daniel Pauli, and Matthias Kovatsch
- */
 public class FrequencyClient {
 	
-	private static final String URI = "coap://localhost/helloWorld";
+	// resources
+	private String URI = "coap://localhost:5684/timeResource";
+	private String URI_PROXY = "coap://localhost/proxy";
+	private Option proxyUri = new Option(
+			"coap://localhost:5684/timeResource",
+			OptionNumberRegistry.PROXY_URI);
+	
+	// parameters
+	private int secondsOfTest = 2;
+	private int requestsPerSecond = 200;
+	private boolean sendBurst = true;
+	private boolean testProxy = false;
+	
+	// maps for logging purpose
+	private final ConcurrentHashMap<Integer, Double> delayMap = new ConcurrentHashMap<Integer, Double>();
+	private final List<Integer> responseSet = Collections
+			.synchronizedList(new LinkedList<Integer>());
+	
+	// executors
+	private final ScheduledExecutorService requestScheduler = Executors
+			.newScheduledThreadPool(this.secondsOfTest);
+	private final ScheduledExecutorService measureScheduler = Executors
+			.newSingleThreadScheduledExecutor();
+	
+	public FrequencyClient() {
+	}
+	
+	/**
+	 * 
+	 */
+	public void start() {
+		// start the measurement thread
+		this.measureScheduler.scheduleWithFixedDelay(new MesureRunnable(), 0, 1,
+				TimeUnit.SECONDS);
+		
+		// start the execution thread for the requests
+		long delay = this.sendBurst ? 1000000 : 1000000 / this.requestsPerSecond;
+		this.requestScheduler.scheduleWithFixedDelay(new RequestRunnable(), 0,
+				delay, TimeUnit.NANOSECONDS);
+		
+		// wait the termination of the requests and the measurements
+		try {
+			this.requestScheduler.awaitTermination(this.secondsOfTest * 2,
+					TimeUnit.SECONDS);
+			this.measureScheduler.awaitTermination(this.secondsOfTest * 2,
+					TimeUnit.SECONDS);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		// finish
+		System.out.println();
+	}
+	
+	public boolean isTerminated() {
+		return this.requestScheduler.isTerminated()
+				&& this.measureScheduler.isTerminated();
+	}
+	
+	/**
+	 * 
+	 */
+	public void printStats() {
+		// remove the first measure in order not to have wrong numbers
+		this.responseSet.remove(new Integer(0));
+		
+		// DURATION
+		System.out.println("Duration expected: " + this.secondsOfTest
+				+ "s, actual duration: " + this.responseSet.size() + "s");
+		
+		// RESPONSE TIME
+		System.out.println("*** RESPONSE TIME ***");
+		double count = 0;
+		for (Double rtt : this.delayMap.values()) {
+			count += rtt;
+		}
+		double avg = count / this.delayMap.size();
+		System.out.println("AVG expected: "
+				+ (((double) 1000) / this.requestsPerSecond)
+				+ "ms, AVG actual: "
+				+ avg + "ms");
+		Double max = Collections.max(this.delayMap.values());
+		Double min = Collections.min(this.delayMap.values());
+		System.out.println("Max: " + max + "ms, min: " + min + "ms");
+		
+		// NUMBER OF RESPONSES
+		System.out.println("*** NUMBER OF RESPONSES ***");
+		count = 0;
+		for (Integer requests : this.responseSet) {
+			count += requests;
+		}
+		System.out.println("Tot requests: "
+				+ (this.requestsPerSecond * this.secondsOfTest)
+				+ ", tot responses: "
+				+ count);
+		System.out.println("Requests per second sent: " + this.requestsPerSecond
+				+ ", AVG response per second received: "
+				+ (count / this.responseSet.size()));
+		int max1 = Collections.max(this.responseSet);
+		int min1 = Collections.min(this.responseSet);
+		System.out.println("Max: " + max1 + ", min: " + min1);
+	}
+	
+	/**
+	 * @param uRI the uRI to set
+	 */
+	public void setURI(String uRI) {
+		this.URI = uRI;
+	}
+	
+	/**
+	 * @param uRI_PROXY the uRI_PROXY to set
+	 */
+	public void setURI_PROXY(String uRI_PROXY) {
+		this.URI_PROXY = uRI_PROXY;
+	}
+	
+	/**
+	 * @param proxyUri the proxyUri to set
+	 */
+	public void setProxyUri(Option proxyUri) {
+		this.proxyUri = proxyUri;
+	}
+	
+	/**
+	 * @param secondsOfTest the secondsOfTest to set
+	 */
+	public void setSecondsOfTest(int secondsOfTest) {
+		this.secondsOfTest = secondsOfTest;
+	}
+	
+	/**
+	 * @param requestsPerSecond the requestsPerSecond to set
+	 */
+	public void setRequestsPerSecond(int requestsPerSecond) {
+		this.requestsPerSecond = requestsPerSecond;
+	}
+	
+	/**
+	 * @param sendBurst the sendBurst to set
+	 */
+	public void setSendBurst(boolean sendBurst) {
+		this.sendBurst = sendBurst;
+	}
+	
+	/**
+	 * @param testProxy the testProxy to set
+	 */
+	public void setTestProxy(boolean testProxy) {
+		this.testProxy = testProxy;
+	}
+	
+	class RequestRunnable implements Runnable {
+		// the dimension of the delayMap on the previous measure
+		private volatile Integer iterations = (FrequencyClient.this.sendBurst ? FrequencyClient.this.secondsOfTest
+				: FrequencyClient.this.secondsOfTest
+				* FrequencyClient.this.requestsPerSecond);
+		
+		@Override
+		public void run() {
+			boolean proceed = false;
+			
+			//			System.out.println(this.iterations);
+			synchronized (this.iterations) {
+				if (this.iterations > 0) {
+					this.iterations--;
+					proceed = true;
+				}
+			}
+			
+			if (proceed) {
+				if (FrequencyClient.this.sendBurst) {
+					for (int j = 0; j < FrequencyClient.this.requestsPerSecond; j++) {
+						getResponse();
+					}
+				} else {
+					getResponse();
+				}
+			}
+			
+			// terminate the executor
+			if (this.iterations == 0) {
+				FrequencyClient.this.requestScheduler.shutdownNow();
+			}
+		}
+		
+		/**
+		 */
+		private void getResponse() {
+			// create request according to specified method
+			//			Request request = new Request(CodeRegistry.METHOD_GET, false) {
+			Request request = new GETRequest() {
+				@Override
+				protected void handleResponse(Response response) {
+					//response.prettyPrint();
+					
+					FrequencyClient.this.delayMap.put(response.getMID(),
+							response.getRTT());
+					
+					//						System.out.println("Time elapsed (ms): "
+					//								+ response.getRTT());
+				}
+			};
+			
+			if (FrequencyClient.this.testProxy) {
+				request.setURI(FrequencyClient.this.URI_PROXY);
+				request.setOption(FrequencyClient.this.proxyUri);
+			} else {
+				request.setURI(FrequencyClient.this.URI);
+			}
+			request.setToken(TokenManager.getInstance().acquireToken());
+			
+			// execute request
+			try {
+				request.execute();
+			} catch (UnknownHostException e) {
+				System.err.println("Unknown host: " + e.getMessage());
+				//					System.exit(-1);
+			} catch (IOException e) {
+				System.err.println("Failed to execute request: "
+						+ e.getMessage());
+				//					System.exit(-1);
+			}
+		}
+	}
+	
+	class MesureRunnable implements Runnable {
+		// the dimension of the delayMap on the previous measure
+		int previousMapSize = 0;
+		int totRequests = FrequencyClient.this.secondsOfTest * FrequencyClient.this.requestsPerSecond;
+		
+		@Override
+		public void run() {
+			// run until there are requests without a response
+			if (this.totRequests > 10) {
+				// add the number of the request performed in the last time slot
+				int requestCompleted = FrequencyClient.this.delayMap.size()
+						- this.previousMapSize;
+				// log only if there are responses
+				this.totRequests -= requestCompleted;
+				FrequencyClient.this.responseSet.add(requestCompleted);
+				
+				System.out.println("Second " + FrequencyClient.this.responseSet.size()
+						+ ", requests completed: " + requestCompleted
+						+ ", remaining " + this.totRequests + " requests");
+				
+				// update the previous value
+				this.previousMapSize = FrequencyClient.this.delayMap.size();
+			} else {
+				// terminate the execution if there are no more responses to wait for
+				FrequencyClient.this.measureScheduler.shutdownNow();
+			}
+		}
+	}
 	
 	/*
 	 * Main method of this client.
 	 */
 	public static void main(String[] args) {
-		
-		Log.setLevel(Level.ALL);
+		Log.setLevel(Level.SEVERE);
 		Log.init();
 		
-		// with this directive the client have the RateControlLayer disabled
-		Communicator.setRequestPerSecond(0);
+		FrequencyClient frequencyClient = new FrequencyClient();
 		
-		// create the maps for logging purpose
-		final ConcurrentHashMap<Integer, Double> delayMap = new ConcurrentHashMap<Integer, Double>();
-		final Vector<Integer> requestsVector = new Vector<Integer>();
+		frequencyClient.start();
 		
-		// creation of the timer that will measure the distribution of the responses
-		Timer timer = new Timer();
-		timer.schedule(new TimerTask() {
-			
-			int previousSize = 0;
-			
-			@Override
-			public void run() {
-				if (this.previousSize != delayMap.size()) {
-					requestsVector.add(delayMap.size() - this.previousSize);
-					this.previousSize = delayMap.size();
-				}
-			}
-		}, 0, 1000);
-		
-		// parameters
-		int secondsOfTest = 5;
-		int requestsPerSecond = 50;
-		boolean sendBurst = true;
-		
-		// the external cycle represents the duration of the test without any constraint
-		for (int i = 0; i < secondsOfTest; i++) {
-			
-			// the main thread sends bursts of request with this sleep
-			if (sendBurst) {
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}
-			
-			for (int j = 0; j < requestsPerSecond; j++) {
-				
-				// the main thread has a normal distribution of the requests with this sleep
-				if (!sendBurst) {
-					try {
-						Thread.sleep(1000 / requestsPerSecond);
-					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-				}
-				
-				// create request according to specified method
-				Request request = new Request(CodeRegistry.METHOD_GET, false) {
-					@Override
-					protected void handleResponse(Response response) {
-						//response.prettyPrint();
-						
-						delayMap.put(response.getMID(), response.getRTT());
-						
-						System.out.println("Time elapsed (ms): "
-								+ response.getRTT());
-					}
-				};
-				
-				request.setURI(URI);
-				//				request.setPayload(payload);
-				request.setToken( TokenManager.getInstance().acquireToken() );
-				
-				
-				// request.prettyPrint();
-				
-				// execute request
-				try {
-					request.execute();
-					
-				} catch (UnknownHostException e) {
-					System.err.println("Unknown host: " + e.getMessage());
-					System.exit(-1);
-				} catch (IOException e) {
-					System.err.println("Failed to execute request: " + e.getMessage());
-					System.exit(-1);
-				}
-				
-				// finish
-				System.out.println();
-			}
+		while (!frequencyClient.isTerminated()) {
+			;
 		}
 		
-		// wait the end of the request
-		try {
-			System.in.read();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		frequencyClient.printStats();
 		
-		// end the timer for stats
-		timer.cancel();
-		
-		// remove the last measure in order not to have wrong numbers
-		requestsVector.remove(requestsVector.size() - 1);
-		
-		// DURATION
-		System.out.println("Duration expected: " + secondsOfTest
-				+ "s, duration actual: " + requestsVector.size() + "s");
-		
-		//
-		double count = 0;
-		for (Double rtt : delayMap.values()) {
-			count += rtt;
-		}
-		
-		double avg = count / delayMap.size();
-		
-		System.out.println("AVG expected: "
-				+ (((double) 1000) / requestsPerSecond)
-				+ "ms, AVG actual: "
-				+ avg + "ms");
-		
-		count = 0;
-		for (Integer requests : requestsVector) {
-			count += requests;
-		}
-		
-		System.out.println("Requests per second expected: " + requestsPerSecond
-				+ ", AVG requests per second actual: "
-				+ (count / requestsVector.size()));
-		
+		System.exit(0);
 	}
-	
-	/*
-	 * Outputs user guide of this program.
-	 */
-	public static void printInfo() {
-		System.out.println("Californium (Cf) Example Client");
-		System.out.println("(c) 2012, Institute for Pervasive Computing, ETH Zurich");
-		System.out.println();
-		System.out.println("Usage: " + FrequencyClient.class.getSimpleName() + " [-l] METHOD URI [PAYLOAD]");
-		System.out.println("  METHOD  : {GET, POST, PUT, DELETE, DISCOVER, OBSERVE}");
-		System.out.println("  URI     : The CoAP URI of the remote endpoint or resource");
-		System.out.println("  PAYLOAD : The data to send with the request");
-		System.out.println("Options:");
-		System.out.println("  -l      : Loop for multiple responses");
-		System.out.println("           (automatic for OBSERVE and separate responses)");
-		System.out.println();
-		System.out.println("Examples:");
-		System.out.println("  ExampleClient DISCOVER coap://localhost");
-		System.out.println("  ExampleClient POST coap://vs0.inf.ethz.ch:5683/storage my data");
-	}
-	
-	/*
-	 * Instantiates a new request based on a string describing a method.
-	 * 
-	 * @return A new request object, or null if method not recognized
-	 */
-	private static Request newRequest(String method) {
-		if (method.equals("GET")) {
-			return new GETRequest();
-		} else if (method.equals("POST")) {
-			return new POSTRequest();
-		} else if (method.equals("PUT")) {
-			return new PUTRequest();
-		} else if (method.equals("DELETE")) {
-			return new DELETERequest();
-		} else if (method.equals("DISCOVER")) {
-			return new GETRequest();
-		} else if (method.equals("OBSERVE")) {
-			return new GETRequest();
-		} else {
-			return null;
-		}
-	}
-	
 }

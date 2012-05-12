@@ -31,10 +31,10 @@
 package ch.ethz.inf.vs.californium.layers;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.Message;
@@ -53,18 +53,18 @@ import ch.ethz.inf.vs.californium.util.Properties;
  * @author Matthias Kovatsch
  */
 public class TokenLayer extends UpperLayer {
-
-// Members /////////////////////////////////////////////////////////////////////
 	
-	private Map<String, RequestResponseSequence> exchanges = new HashMap<String, RequestResponseSequence>();
-
+	// Members /////////////////////////////////////////////////////////////////////
+	
+	private Map<String, RequestResponseSequence> exchanges = new ConcurrentHashMap<String, RequestResponseSequence>();
+	
 	/** A timer for scheduling overall request timeouts. */
 	private Timer timer = new Timer(true);
 	
 	/** The time to wait for requests to complete, in milliseconds. */
 	private int sequenceTimeout;
 	
-// Nested Classes //////////////////////////////////////////////////////////////
+	// Nested Classes //////////////////////////////////////////////////////////////
 	
 	/*
 	 * Entity class to keep state of transfers
@@ -81,14 +81,14 @@ public class TokenLayer extends UpperLayer {
 	private class TimeoutTask extends TimerTask {
 		
 		private RequestResponseSequence sequence;
-
+		
 		public TimeoutTask(RequestResponseSequence sequence) {
 			this.sequence = sequence;
 		}
 		
 		@Override
 		public void run() {
-			transferTimedOut(sequence);
+			transferTimedOut(this.sequence);
 		}
 	}
 	
@@ -102,11 +102,11 @@ public class TokenLayer extends UpperLayer {
 	public TokenLayer() {
 		this(Properties.std.getInt("DEFAULT_OVERALL_TIMEOUT"));
 	}
-
+	
 	// I/O implementation //////////////////////////////////////////////////////
 	
 	@Override
-	protected void doSendMessage(Message msg) throws IOException { 
+	protected void doSendMessage(Message msg) throws IOException {
 		
 		// set token option if required
 		if (msg.requiresToken()) {
@@ -124,19 +124,19 @@ public class TokenLayer extends UpperLayer {
 		}
 		
 		sendMessageOverLowerLayer(msg);
-	}	
+	}
 	
 	@Override
 	protected void doReceiveMessage(Message msg) {
-
+		
 		if (msg instanceof Response) {
-
+			
 			Response response = (Response) msg;
 			
 			RequestResponseSequence sequence = getExchange(msg.sequenceKey());
-
+			
 			// check for missing token
-			if (sequence == null && response.getToken().length==0) {
+			if ((sequence == null) && (response.getToken().length==0)) {
 				
 				LOG.warning(String.format("Remote endpoint failed to echo token: %s", msg.key()));
 				
@@ -155,13 +155,13 @@ public class TokenLayer extends UpperLayer {
 				if (msg.getFirstOption(OptionNumberRegistry.OBSERVE)==null) {
 					removeExchange(msg.sequenceKey());
 				}
-
+				
 				LOG.info(String.format("Incoming response from %s: %s // RTT: %fms", ((Response) msg).getRequest().getUriPath(), msg.sequenceKey(), ((Response) msg).getRTT()));
 				
 				deliverMessage(msg);
 				
 			} else {
-			
+				
 				LOG.warning(String.format("Dropping unexpected response: %s", response.sequenceKey()));
 			}
 			
@@ -185,31 +185,31 @@ public class TokenLayer extends UpperLayer {
 		sequence.timeoutTask = new TimeoutTask(sequence);
 		
 		// associate token with Transaction
-		exchanges.put(sequence.key, sequence);
+		this.exchanges.put(sequence.key, sequence);
 		
-		timer.schedule(sequence.timeoutTask, sequenceTimeout);
-
+		this.timer.schedule(sequence.timeoutTask, this.sequenceTimeout);
+		
 		LOG.fine(String.format("Stored new exchange: %s", sequence.key));
 		
 		return sequence;
 	}
 	
 	private RequestResponseSequence getExchange(String key) {
-		return exchanges.get(key);
+		return this.exchanges.get(key);
 	}
 	
 	private synchronized void removeExchange(String key) {
 		
-		RequestResponseSequence exchange = exchanges.remove(key);
+		RequestResponseSequence exchange = this.exchanges.remove(key);
 		
 		if (exchange!=null) {
-			
-			exchange.timeoutTask.cancel();
-			
-			TokenManager.getInstance().releaseToken(exchange.request.getToken());
-	
-			LOG.finer(String.format("Cleared exchange: %s", exchange.key));
-		}
+
+		exchange.timeoutTask.cancel();
+		exchange.timeoutTask = null;
+		
+		TokenManager.getInstance().releaseToken(exchange.request.getToken());
+		
+		LOG.finer(String.format("Cleared exchange: %s", exchange.key));
 	}
 	
 	private void transferTimedOut(RequestResponseSequence exchange) {
@@ -227,13 +227,13 @@ public class TokenLayer extends UpperLayer {
 		StringBuilder stats = new StringBuilder();
 		
 		stats.append("Request-Response exchanges: ");
-		stats.append(exchanges.size());
+		stats.append(this.exchanges.size());
 		stats.append('\n');
 		stats.append("Messages sent:     ");
-		stats.append(numMessagesSent);
+		stats.append(this.numMessagesSent);
 		stats.append('\n');
 		stats.append("Messages received: ");
-		stats.append(numMessagesReceived);
+		stats.append(this.numMessagesReceived);
 		
 		return stats.toString();
 	}

@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ch.ethz.inf.vs.californium.coap.BlockOption;
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
@@ -88,8 +89,8 @@ public class TransferLayer extends UpperLayer {
 
 // Members /////////////////////////////////////////////////////////////////////
 	
-	private Map<String, TransferContext> incoming = new HashMap<String, TransferContext>();
-	private Map<String, TransferContext> outgoing = new HashMap<String, TransferContext>();
+	private Map<String, TransferContext> incoming = new ConcurrentHashMap<String, TransferContext>();
+	private Map<String, TransferContext> outgoing = new ConcurrentHashMap<String, TransferContext>();
 	
 	// default block size used for the transfer
 	private int defaultSZX;

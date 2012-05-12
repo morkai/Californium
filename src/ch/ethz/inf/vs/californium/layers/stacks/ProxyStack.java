@@ -5,8 +5,9 @@ package ch.ethz.inf.vs.californium.layers.stacks;
 
 import java.io.IOException;
 import java.net.SocketException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.Request;
@@ -25,21 +26,17 @@ import ch.ethz.inf.vs.californium.layers.UDPLayer;
  */
 public class ProxyStack extends AbstractStack {
 	
-	private final Map<String, Integer> resourceMap = new HashMap<String, Integer>();
-	private final Map<String, Integer> addressMap = new HashMap<String, Integer>();
+	private final Map<String, Integer> resourceMap = new ConcurrentHashMap<String, Integer>();
+	private final Map<String, Integer> addressMap = new ConcurrentHashMap<String, Integer>();
 	
-	protected int requestPerSecond = 10;
+	protected int requestPerSecond = 0;
 	private int port;
 	
 	public ProxyStack(int udpPort, int transferBlockSize, boolean runAsDaemon,
-			int requestPerSecond) throws SocketException {
-		super(udpPort, transferBlockSize, runAsDaemon);
+			int requestPerSecond, ExecutorService threadPool)
+					throws SocketException {
+		super(udpPort, transferBlockSize, runAsDaemon, threadPool);
 		this.requestPerSecond = requestPerSecond;
-	}
-	
-	public ProxyStack(int udpPort, int transferBlockSize, boolean runAsDaemon)
-			throws SocketException {
-		super(udpPort, transferBlockSize, runAsDaemon);
 	}
 	
 	public ProxyStack(int udpPort, boolean runAsDaemon) throws SocketException {
@@ -58,13 +55,14 @@ public class ProxyStack extends AbstractStack {
 	protected void createStack() throws SocketException {
 		// initialize layers and the stack
 		enquequeLayer(new CachingLayer());
-		enquequeLayer(new RateControlLayer(this.requestPerSecond));
 		enquequeLayer(new TokenLayer());
 		enquequeLayer(new TransferLayer(this.transferBlockSize));
 		enquequeLayer(new MatchingLayer());
 		enquequeLayer(new TransactionLayer());
+		enquequeLayer(new RateControlLayer(this.requestPerSecond));
 		// enquequeLayer(new AdverseLayer());
-		UDPLayer udpLayer = new UDPLayer(this.udpPort, this.runAsDaemon);
+		UDPLayer udpLayer = new UDPLayer(this.udpPort, this.runAsDaemon,
+				"proxy");
 		enquequeLayer(udpLayer);
 		this.port = udpLayer.getPort();
 	}
@@ -83,8 +81,8 @@ public class ProxyStack extends AbstractStack {
 		}
 		
 		super.doSendMessage(msg);
-		System.out
-		.println("ProxyStack - SENT MESSAGE TO LOWER LAYERS");
+		//		System.out
+		//		.println("ProxyStack - SENT MESSAGE TO LOWER LAYERS");
 	}
 	
 	@Override
@@ -99,8 +97,8 @@ public class ProxyStack extends AbstractStack {
 		//		}
 		
 		super.doReceiveMessage(msg);
-		System.out
-		.println("ProxyStack - RECEIVED MESSAGE AND SENT TO COMMUNICATOR");
+		//		System.out
+		//		.println("ProxyStack - RECEIVED MESSAGE AND SENT TO COMMUNICATOR");
 		
 	}
 	

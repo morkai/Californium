@@ -33,7 +33,6 @@ package ch.ethz.inf.vs.californium.util;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.ConsoleHandler;
-import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -64,24 +63,24 @@ public class Log {
 		@Override
 		public String format(LogRecord record) {
 			return String.format("%s [%s] %s - %s\r\n",
-								 dateFormat.format(new Date(record.getMillis())),
-								 record.getSourceClassName().replace("ch.ethz.inf.vs.californium.", ""),
-								 record.getLevel(), record.getMessage()
-								);
+					dateFormat.format(new Date(record.getMillis())),
+					record.getSourceClassName().replace("ch.ethz.inf.vs.californium.", ""),
+					record.getLevel(), record.getMessage()
+					);
 		}
 	};
 	
 	public static void setLevel(Level l) {
 		logLevel = l;
 	}
-
+	
 	public static void init() {
 		
 		Logger globalLogger = Logger.getLogger("");
 		
 		// Remove the default handler
 		for (Handler handler : globalLogger.getHandlers()) {
-		    globalLogger.removeHandler(handler);
+			globalLogger.removeHandler(handler);
 		}
 		
 		// create custom console handler
@@ -93,14 +92,14 @@ public class Log {
 		globalLogger.addHandler(cHandler);
 		
 		// create custom file handler
-		FileHandler fHandler;
-		try {
-			fHandler = new FileHandler("Californium-log.%g.txt", true);
-			fHandler.setFormatter(printFormatter);
-			globalLogger.addHandler(fHandler);
-		} catch (Exception e) {
-			globalLogger.severe("Cannot add file logger: " + e.getMessage());
-		}
+		//		FileHandler fHandler;
+		//		try {
+		//			fHandler = new FileHandler("Californium-log.%g.txt", true);
+		//			fHandler.setFormatter(printFormatter);
+		//			globalLogger.addHandler(fHandler);
+		//		} catch (Exception e) {
+		//			globalLogger.severe("Cannot add file logger: " + e.getMessage());
+		//		}
 		
 		// customize levels
 		Logger.getLogger(Endpoint.class.getName()).setLevel(logLevel);

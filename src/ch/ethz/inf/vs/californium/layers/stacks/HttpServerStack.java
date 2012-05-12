@@ -8,6 +8,7 @@ import java.io.InterruptedIOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.http.ConnectionClosedException;
 import org.apache.http.HttpException;
@@ -47,12 +48,15 @@ import ch.ethz.inf.vs.californium.util.HttpTranslator;
  */
 public class HttpServerStack extends AbstractStack {
 	private int port;
+	private ExecutorService threadPool;
 	
-	public HttpServerStack(int port) {
+	public HttpServerStack(int port, ExecutorService threadPool) {
 		super(true);
 		// initialize layers and the stack
 		this.port = port;
 		
+		this.threadPool = threadPool;
+
 		Thread thread = null;
 		try {
 			thread = new RequestListenerThread(port);
@@ -145,7 +149,7 @@ public class HttpServerStack extends AbstractStack {
 		}
 	}
 	
-	static class RequestListenerThread extends Thread {
+	class RequestListenerThread extends Thread {
 		
 		private static final String SERVER_NAME = "Californium Proxy";
 		private final ServerSocket serversocket;
@@ -154,6 +158,7 @@ public class HttpServerStack extends AbstractStack {
 		
 		public RequestListenerThread(int port)
 				throws IOException {
+			super("HTTP RequestListener");
 			this.serversocket = new ServerSocket(port);
 			this.params = new SyncBasicHttpParams();
 			this.params
@@ -196,9 +201,13 @@ public class HttpServerStack extends AbstractStack {
 					conn.bind(insocket, this.params);
 					
 					// Start worker thread
-					Thread t = new ProxyThread(this.httpService, conn);
-					t.setDaemon(true);
-					t.start();
+					HttpServerStack.this.threadPool
+							.submit(new HTTPServiceThread(this.httpService,
+									conn));
+					
+					//					Thread t = new HTTPServiceThread(this.httpService, conn);
+					//					t.setDaemon(true);
+					//					t.start();
 				} catch (InterruptedIOException ex) {
 					break;
 				} catch (IOException e) {
@@ -211,14 +220,13 @@ public class HttpServerStack extends AbstractStack {
 		}
 	}
 	
-	static class ProxyThread extends Thread {
+	class HTTPServiceThread implements Runnable {
 		
 		private final HttpService httpservice;
 		private final HttpServerConnection conn;
 		
-		public ProxyThread(final HttpService httpservice,
+		public HTTPServiceThread(final HttpService httpservice,
 				final HttpServerConnection conn) {
-			super();
 			this.httpservice = httpservice;
 			this.conn = conn;
 		}

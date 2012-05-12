@@ -33,6 +33,8 @@ package ch.ethz.inf.vs.californium.coap;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import ch.ethz.inf.vs.californium.layers.UpperLayer;
 import ch.ethz.inf.vs.californium.layers.stacks.AbstractStack;
@@ -67,6 +69,8 @@ public class Communicator extends UpperLayer {
 	
 	private static COMMUNICATOR_MODE mode = COMMUNICATOR_MODE.DEFAULT;
 	
+	private ExecutorService threadPool = Executors.newFixedThreadPool(25);
+	
 	private volatile static Communicator singleton = null;
 	
 	// stacks
@@ -79,7 +83,7 @@ public class Communicator extends UpperLayer {
 	// and set for each client/server created
 	private static int clientHttpPort = 0;
 	private static int serverHttpPort = 0;
-	private static int defaultUdpPort = 5683;
+	private static int defaultUdpPort = 0;
 	private static int proxyUdpPort = 0;
 	private static boolean daemon = false;
 	private static int blockSize = 0;
@@ -94,24 +98,22 @@ public class Communicator extends UpperLayer {
 					this.httpClientStack = new HttpClientStack();
 				case HTTP_TO_COAP_PROXY:
 					// create the stack
-					this.httpServerStack = new HttpServerStack(serverHttpPort);
+					this.httpServerStack = new HttpServerStack(serverHttpPort,
+							this.threadPool);
 					// register the  communicator as the receiver
 					this.httpServerStack.registerReceiver(this);
 				case COAP_PROXY:
 					// create the stacks
 					this.proxyStack = new ProxyStack(proxyUdpPort, blockSize,
-							daemon, requestPerSecond);
+							daemon, requestPerSecond, this.threadPool);
 					
 					// register the  communicator as the receiver
 					// (outgoing messages from the proxy stack will be handled by the Communicator)
 					this.proxyStack.registerReceiver(this);
-					
-					// create the maps for the statistics
-					
 				case DEFAULT:
 					// create the stack
 					this.defaultStack = new DefaultStack(defaultUdpPort,
-							blockSize, daemon);
+							blockSize, daemon, this.threadPool);
 					
 					// register the  communicator as the receiver
 					// (outgoing messages from the proxy stack will be handled by the Communicator)
@@ -254,22 +256,22 @@ public class Communicator extends UpperLayer {
 					&& (message instanceof Request)
 					&& (((destinationAddress != localHost) && !destinationAddress
 							.isLoopbackAddress()) || (message
-							.getPeerAddress()
-							.getPort() != defaultUdpPort))) {
+									.getPeerAddress()
+									.getPort() != defaultUdpPort))) {
 				// send the message to the proxy stack
 				this.proxyStack.sendMessage(message);
-				System.out.println("COMMUNICATOR - SEND TO PROXY STACK");
+				//				System.out.println("COMMUNICATOR - SEND TO PROXY STACK");
 			} else {
 				// send the message to the default stack
 				this.defaultStack.sendMessage(message);
-				System.out.println("COMMUNICATOR - SEND TO DEFAULT STACK");
+				//				System.out.println("COMMUNICATOR - SEND TO DEFAULT STACK");
 			}
 		}
 	}
 	
 	@Override
 	protected void doReceiveMessage(Message msg) {
-		System.out.println("COMMUNICATOR - RECEIVED MESSAGE");
+		//		System.out.println("COMMUNICATOR - RECEIVED MESSAGE");
 		
 		if (CodeRegistry.isResponse(msg.getCode())) {
 			Response response = (Response) msg;

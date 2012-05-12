@@ -31,6 +31,7 @@
 package ch.ethz.inf.vs.californium.examples;
 
 import java.net.SocketException;
+import java.util.logging.Level;
 
 import ch.ethz.inf.vs.californium.coap.Communicator.COMMUNICATOR_MODE;
 import ch.ethz.inf.vs.californium.endpoint.Endpoint;
@@ -57,7 +58,7 @@ public class ExampleProxy extends ProxyEndpoint {
 	// Application entry point /////////////////////////////////////////////////
 	
 	public static void main(String[] args) {
-		
+		Log.setLevel(Level.WARNING);
 		Log.init();
 		
 		// create server

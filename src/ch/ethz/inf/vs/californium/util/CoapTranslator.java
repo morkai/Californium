@@ -22,8 +22,6 @@ import ch.ethz.inf.vs.californium.layers.TransactionLayer;
  */
 public class CoapTranslator {
 	
-	//	private final static ConcurrentHashMap<String, Message> forwardedMessageMap = new ConcurrentHashMap<String, Message>();
-	
 	protected static final Logger LOG = Logger
 			.getLogger(CoapTranslator.class.getName());
 	
@@ -152,13 +150,4 @@ public class CoapTranslator {
 		
 		return result;
 	}
-	
-	//	public static boolean contains(Message message) {
-	//		String sourceAddress = message.getPeerAddress().toString();
-	//		//		System.out.println(sourceAddress);
-	//		//		for (String a : forwardedMessageMap.keySet()) {
-	//		//			System.out.println(a);
-	//		//		}
-	//		return forwardedMessageMap.keySet().contains(sourceAddress);
-	//	}
 }

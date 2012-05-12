@@ -33,6 +33,7 @@ package ch.ethz.inf.vs.californium.layers.stacks;
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.Deque;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import ch.ethz.inf.vs.californium.coap.Message;
@@ -63,19 +64,24 @@ public abstract class AbstractStack extends UpperLayer {
 	private final Deque<Layer> layerQueue = new LinkedBlockingDeque<Layer>();
 	
 	protected UpperLayer upperLayer = null;
+	private ExecutorService threadPool;
 	
 	// Constructors /////////////////////////////////////////////////////////////////////
 	
 	/**
 	 * 
+	 * @param threadPool
 	 * @param actualPort The local UDP port to listen for incoming messages
 	 * @param daemon True if receiver thread should terminate with main thread
 	 * @param defaultBlockSize The default block size used for block-wise transfers
 	 *        or -1 to disable outgoing block-wise transfers
 	 * @throws SocketException
 	 */
-	public AbstractStack(int udpPort, int transferBlockSize, boolean runAsDaemon)
-			throws SocketException {
+	public AbstractStack(int udpPort, int transferBlockSize,
+			boolean runAsDaemon, ExecutorService threadPool)
+					throws SocketException {
+		
+		this.threadPool = threadPool;
 		this.udpPort = udpPort;
 		this.transferBlockSize = transferBlockSize;
 		this.runAsDaemon = runAsDaemon;
@@ -88,7 +94,7 @@ public abstract class AbstractStack extends UpperLayer {
 	
 	public AbstractStack(int udpPort, boolean runAsDaemon)
 			throws SocketException {
-		this(udpPort, 0, runAsDaemon);
+		this(udpPort, 0, runAsDaemon, null);
 	}
 	
 	public AbstractStack(boolean fake) {
@@ -143,27 +149,6 @@ public abstract class AbstractStack extends UpperLayer {
 		return this.upperLayer;
 	}
 	
-	//	/**
-	//	 * @param upperLayer the upperLayer to set
-	//	 */
-	//	public void setUpperLayer(UpperLayer upperLayer) {
-	//		if (upperLayer == null) {
-	//			throw new IllegalArgumentException("upperLayer == null");
-	//		}
-	//
-	//		// if the upperLayer is already set it needs to remove it from the deque
-	//		if (this.upperLayer != null) {
-	//			this.layerQueue.remove(upperLayer);
-	//		}
-	//
-	//		// put the layer at the beginnign of the deque and link it it with the communicator
-	//		this.layerQueue.addLast(upperLayer);
-	//		upperLayer.setLowerLayer(this);
-	//		this.upperLayer = upperLayer;
-	//	}
-	
-	// Internal ////////////////////////////////////////////////////////////////
-	
 	protected synchronized void enquequeLayer(Layer layer) {
 		// get the first layer if the stack is not empty
 		if (!this.layerQueue.isEmpty()) {
@@ -205,7 +190,28 @@ public abstract class AbstractStack extends UpperLayer {
 	protected void doReceiveMessage(Message msg) {
 		LOG.finest(this.getClass().getSimpleName() + " doReceiveMessage");
 		
-		// pass message to registered receivers
-		deliverMessage(msg);
+		// send the message to registered receivers
+		if (this.threadPool != null) {
+			this.threadPool.submit(new ReceiveRunnable(msg));
+		} else {
+			deliverMessage(msg);
+		}
+	}
+	
+	class ReceiveRunnable implements Runnable {
+		
+		private Message message;
+		
+		public ReceiveRunnable(Message message) {
+			if (message == null) {
+				throw new IllegalArgumentException("message == null");
+			}
+			this.message = message;
+		}
+		
+		@Override
+		public void run() {
+			deliverMessage(this.message);
+		}
 	}
 }

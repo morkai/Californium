@@ -31,6 +31,7 @@
 package ch.ethz.inf.vs.californium.layers.stacks;
 
 import java.net.SocketException;
+import java.util.concurrent.ExecutorService;
 
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.MessageReceiver;
@@ -64,10 +65,11 @@ import ch.ethz.inf.vs.californium.layers.UpperLayer;
 public class DefaultStack extends AbstractStack {
 	
 	private int port;
-
-	public DefaultStack(int udpPort, int transferBlockSize, boolean runAsDaemon)
-			throws SocketException {
-		super(udpPort, transferBlockSize, runAsDaemon);
+	
+	public DefaultStack(int udpPort, int transferBlockSize,
+			boolean runAsDaemon, ExecutorService threadPool)
+					throws SocketException {
+		super(udpPort, transferBlockSize, runAsDaemon, threadPool);
 	}
 	
 	public DefaultStack(int udpPort, boolean runAsDaemon)

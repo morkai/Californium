@@ -31,6 +31,7 @@
 package ch.ethz.inf.vs.californium.coap;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -42,25 +43,26 @@ import java.util.logging.Logger;
  * @author Matthias Kovatsch
  */
 public class TokenManager {
-
-// Logging /////////////////////////////////////////////////////////////////////
+	
+	// Logging /////////////////////////////////////////////////////////////////////
 	
 	private static final Logger LOG = Logger.getLogger(TokenManager.class.getName());
 	
-// Static Attributes ///////////////////////////////////////////////////////////
+	// Static Attributes ///////////////////////////////////////////////////////////
 	
 	// the empty token, used as default value
 	public static final byte[] emptyToken = new byte[0];
 	
 	private static TokenManager singleton = new TokenManager();
-
-// Members /////////////////////////////////////////////////////////////////////
 	
-	private Set<byte[]> acquiredTokens = new HashSet<byte[]>();
-
+	// Members /////////////////////////////////////////////////////////////////////
+	
+	private Set<byte[]> acquiredTokens = Collections
+			.synchronizedSet(new HashSet<byte[]>());
+	
 	private long currentToken;
 	
-// Constructors ////////////////////////////////////////////////////////////////
+	// Constructors ////////////////////////////////////////////////////////////////
 	
 	/**
 	 * Default singleton constructor.
@@ -80,7 +82,7 @@ public class TokenManager {
 		return singleton;
 	}
 	
-// Methods /////////////////////////////////////////////////////////////////////
+	// Methods /////////////////////////////////////////////////////////////////////
 	
 	/**
 	 * Returns the next message ID to use out of the consecutive 16-bit range.
@@ -88,15 +90,15 @@ public class TokenManager {
 	 * @return the current message ID
 	 */
 	private byte[] nextToken() {
-
+		
 		++this.currentToken;
 		
-		LOG.info("Token value: "+currentToken);
+		LOG.info("Token value: "+this.currentToken);
 		
 		long temp = this.currentToken;
-		ByteArrayOutputStream byteStream = new ByteArrayOutputStream(OptionNumberRegistry.TOKEN_LEN);  
+		ByteArrayOutputStream byteStream = new ByteArrayOutputStream(OptionNumberRegistry.TOKEN_LEN);
 		
-		while (temp>0 && byteStream.size()<OptionNumberRegistry.TOKEN_LEN) {
+		while ((temp>0) && (byteStream.size()<OptionNumberRegistry.TOKEN_LEN)) {
 			byteStream.write((int)(temp & 0xff));
 			temp >>>= 8;
 		}
@@ -115,17 +117,17 @@ public class TokenManager {
 	 * for concurrent transactions.
 	 * 
 	 */
-	public synchronized byte[] acquireToken(boolean preferEmptyToken) {
+	public byte[] acquireToken(boolean preferEmptyToken) {
 		
 		byte[] token = null;
-		if (preferEmptyToken && acquiredTokens.add(emptyToken)) {
+		if (preferEmptyToken && this.acquiredTokens.add(emptyToken)) {
 			token = emptyToken;
 		} else {
 			do {
 				token = nextToken();
-			} while (!acquiredTokens.add(token));
+			} while (!this.acquiredTokens.add(token));
 		}
-		
+		//		System.out.println(Option.hex(token));
 		return token;
 	}
 	
@@ -138,9 +140,9 @@ public class TokenManager {
 	 * 
 	 * @param token The token to release
 	 */
-	public synchronized void releaseToken(byte[] token) {
+	public void releaseToken(byte[] token) {
 		
-		if (!acquiredTokens.remove(token)) {
+		if (!this.acquiredTokens.remove(token)) {
 			LOG.warning(String.format("Token to release is not acquired: %s\n", Option.hex(token)));
 		}
 	}
@@ -151,8 +153,8 @@ public class TokenManager {
 	 * @param token The token to check
 	 * @return True iff the token is currently in use
 	 */
-	public synchronized boolean isAcquired(byte[] token) {
-		return acquiredTokens.contains(token);
+	public boolean isAcquired(byte[] token) {
+		return this.acquiredTokens.contains(token);
 	}
 	
 	

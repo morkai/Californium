@@ -31,8 +31,8 @@
 package ch.ethz.inf.vs.californium.layers;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ch.ethz.inf.vs.californium.coap.Message;
 import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
@@ -46,12 +46,12 @@ import ch.ethz.inf.vs.californium.coap.Response;
  * @author Matthias Kovatsch
  */
 public class MatchingLayer extends UpperLayer {
-
-// Members /////////////////////////////////////////////////////////////////////
 	
-	private Map<String, RequestResponsePair> pairs = new HashMap<String, RequestResponsePair>();
+	// Members /////////////////////////////////////////////////////////////////////
 	
-// Nested Classes //////////////////////////////////////////////////////////////
+	private Map<String, RequestResponsePair> pairs = new ConcurrentHashMap<String, RequestResponsePair>();
+	
+	// Nested Classes //////////////////////////////////////////////////////////////
 	
 	/*
 	 * Entity class to keep state of transfers
@@ -64,13 +64,13 @@ public class MatchingLayer extends UpperLayer {
 	// Constructors ////////////////////////////////////////////////////////////
 	
 	public MatchingLayer() {
-
+		
 	}
-
+	
 	// I/O implementation //////////////////////////////////////////////////////
 	
 	@Override
-	protected void doSendMessage(Message msg) throws IOException { 
+	protected void doSendMessage(Message msg) throws IOException {
 		
 		if (msg instanceof Request) {
 			
@@ -78,19 +78,19 @@ public class MatchingLayer extends UpperLayer {
 		}
 		
 		sendMessageOverLowerLayer(msg);
-	}	
+	}
 	
 	@Override
 	protected void doReceiveMessage(Message msg) {
-
+		
 		if (msg instanceof Response) {
-
+			
 			Response response = (Response) msg;
 			
 			RequestResponsePair pair = getOpenRequest(msg.sequenceKey());
-
+			
 			// check for missing token
-			if (pair == null && response.getToken().length==0) {
+			if ((pair == null) && (response.getToken().length==0)) {
 				
 				LOG.info(String.format("Remote endpoint failed to echo token: %s", msg.key()));
 				
@@ -105,7 +105,7 @@ public class MatchingLayer extends UpperLayer {
 				// attach request and response to each other
 				response.setRequest(pair.request);
 				pair.request.setResponse(response);
-
+				
 				LOG.finer(String.format("Matched open request: %s", response.sequenceKey()));
 				
 				// TODO: ObservingManager.getInstance().isObserving(msg.exchangeKey());
@@ -114,7 +114,7 @@ public class MatchingLayer extends UpperLayer {
 				}
 				
 			} else {
-			
+				
 				LOG.info(String.format("Dropping unexpected response: %s", response.sequenceKey()));
 				return;
 			}
@@ -134,19 +134,19 @@ public class MatchingLayer extends UpperLayer {
 		LOG.finer(String.format("Storing open request: %s", exchange.key));
 		
 		// associate token with Transaction
-		pairs.put(exchange.key, exchange);
+		this.pairs.put(exchange.key, exchange);
 		
 		return exchange;
 	}
 	
 	private RequestResponsePair getOpenRequest(String key) {
-		return pairs.get(key);
+		return this.pairs.get(key);
 	}
 	
 	private void removeOpenRequest(String key) {
 		
-		RequestResponsePair exchange = pairs.remove(key);
-
+		RequestResponsePair exchange = this.pairs.remove(key);
+		
 		LOG.finer(String.format("Cleared open request: %s", exchange.key));
 	}
 	
@@ -154,13 +154,13 @@ public class MatchingLayer extends UpperLayer {
 		StringBuilder stats = new StringBuilder();
 		
 		stats.append("Open requests: ");
-		stats.append(pairs.size());
+		stats.append(this.pairs.size());
 		stats.append('\n');
 		stats.append("Messages sent:     ");
-		stats.append(numMessagesSent);
+		stats.append(this.numMessagesSent);
 		stats.append('\n');
 		stats.append("Messages received: ");
-		stats.append(numMessagesReceived);
+		stats.append(this.numMessagesReceived);
 		
 		return stats.toString();
 	}
