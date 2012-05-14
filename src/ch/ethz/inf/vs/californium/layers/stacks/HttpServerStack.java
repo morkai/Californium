@@ -202,7 +202,7 @@ public class HttpServerStack extends AbstractStack {
 					
 					// Start worker thread
 					HttpServerStack.this.threadPool
-							.submit(new HTTPServiceThread(this.httpService,
+							.submit(new HTTPServiceRunnable(this.httpService,
 									conn));
 					
 					//					Thread t = new HTTPServiceThread(this.httpService, conn);
@@ -220,12 +220,12 @@ public class HttpServerStack extends AbstractStack {
 		}
 	}
 	
-	class HTTPServiceThread implements Runnable {
+	class HTTPServiceRunnable implements Runnable {
 		
 		private final HttpService httpservice;
 		private final HttpServerConnection conn;
 		
-		public HTTPServiceThread(final HttpService httpservice,
+		public HTTPServiceRunnable(final HttpService httpservice,
 				final HttpServerConnection conn) {
 			this.httpservice = httpservice;
 			this.conn = conn;

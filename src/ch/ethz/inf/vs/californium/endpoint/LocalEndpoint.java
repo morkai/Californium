@@ -34,6 +34,7 @@ import java.net.SocketException;
 
 import ch.ethz.inf.vs.californium.coap.CodeRegistry;
 import ch.ethz.inf.vs.californium.coap.Communicator;
+import ch.ethz.inf.vs.californium.coap.Communicator.COMMUNICATOR_MODE;
 import ch.ethz.inf.vs.californium.coap.GETRequest;
 import ch.ethz.inf.vs.californium.coap.ObservingManager;
 import ch.ethz.inf.vs.californium.coap.OptionNumberRegistry;
@@ -250,7 +251,7 @@ public class LocalEndpoint extends Endpoint {
 					resource = base;
 				}
 			}
-			this.rootResource.addSubResource(resource);
+			this.rootResource.add(resource);
 		}
 	}
 	

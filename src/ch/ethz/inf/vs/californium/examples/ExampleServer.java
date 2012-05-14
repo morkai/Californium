@@ -37,6 +37,10 @@ import ch.ethz.inf.vs.californium.coap.Request;
 import ch.ethz.inf.vs.californium.endpoint.Endpoint;
 import ch.ethz.inf.vs.californium.endpoint.LocalEndpoint;
 import ch.ethz.inf.vs.californium.endpoint.LocalResource;
+import ch.ethz.inf.vs.californium.examples.plugtest.LongPath;
+import ch.ethz.inf.vs.californium.examples.plugtest.Observe;
+import ch.ethz.inf.vs.californium.examples.plugtest.Query;
+import ch.ethz.inf.vs.californium.examples.plugtest.Separate;
 import ch.ethz.inf.vs.californium.examples.resources.CarelessResource;
 import ch.ethz.inf.vs.californium.examples.resources.HelloWorldResource;
 import ch.ethz.inf.vs.californium.examples.resources.ImageResource;
@@ -80,6 +84,11 @@ public class ExampleServer extends LocalEndpoint {
 		addResource(new ZurichWeatherResource());
 		addResource(new ImageResource());
 		addResource(new CarelessResource());
+		
+		addResource(new LongPath());
+		addResource(new Query());
+		addResource(new Separate());
+		addResource(new Observe());
 	}
 	
 	// Logging /////////////////////////////////////////////////////////////////

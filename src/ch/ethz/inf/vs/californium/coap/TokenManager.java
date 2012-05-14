@@ -127,7 +127,6 @@ public class TokenManager {
 				token = nextToken();
 			} while (!this.acquiredTokens.add(token));
 		}
-		//		System.out.println(Option.hex(token));
 		return token;
 	}
 	

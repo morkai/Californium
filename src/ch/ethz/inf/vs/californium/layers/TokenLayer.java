@@ -203,13 +203,14 @@ public class TokenLayer extends UpperLayer {
 		RequestResponseSequence exchange = this.exchanges.remove(key);
 		
 		if (exchange!=null) {
-
-		exchange.timeoutTask.cancel();
-		exchange.timeoutTask = null;
-		
-		TokenManager.getInstance().releaseToken(exchange.request.getToken());
-		
-		LOG.finer(String.format("Cleared exchange: %s", exchange.key));
+			
+			exchange.timeoutTask.cancel();
+			exchange.timeoutTask = null;
+			
+			TokenManager.getInstance().releaseToken(exchange.request.getToken());
+			
+			LOG.finer(String.format("Cleared exchange: %s", exchange.key));
+		}
 	}
 	
 	private void transferTimedOut(RequestResponseSequence exchange) {

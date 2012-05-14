@@ -52,16 +52,16 @@ import ch.ethz.inf.vs.californium.util.Log;
 public class FrequencyClient {
 	
 	// resources
-	private String URI = "coap://localhost:5684/timeResource";
-	private String URI_PROXY = "coap://localhost/proxy";
-	private Option proxyUri = new Option(
+	private String serverUri = "coap://localhost:5684/timeResource";
+	private String proxyUri = "coap://localhost/proxy";
+	private Option proxyUriOption = new Option(
 			"coap://localhost:5684/timeResource",
 			OptionNumberRegistry.PROXY_URI);
 	
 	// parameters
-	private int secondsOfTest = 2;
-	private int requestsPerSecond = 200;
-	private boolean sendBurst = true;
+	private int secondsOfTest = 20;
+	private int requestsPerSecond = 100;
+	private boolean sendBurst = false;
 	private boolean testProxy = false;
 	
 	// maps for logging purpose
@@ -159,21 +159,21 @@ public class FrequencyClient {
 	 * @param uRI the uRI to set
 	 */
 	public void setURI(String uRI) {
-		this.URI = uRI;
+		this.serverUri = uRI;
 	}
 	
 	/**
 	 * @param uRI_PROXY the uRI_PROXY to set
 	 */
 	public void setURI_PROXY(String uRI_PROXY) {
-		this.URI_PROXY = uRI_PROXY;
+		this.proxyUri = uRI_PROXY;
 	}
 	
 	/**
 	 * @param proxyUri the proxyUri to set
 	 */
 	public void setProxyUri(Option proxyUri) {
-		this.proxyUri = proxyUri;
+		this.proxyUriOption = proxyUri;
 	}
 	
 	/**
@@ -257,10 +257,10 @@ public class FrequencyClient {
 			};
 			
 			if (FrequencyClient.this.testProxy) {
-				request.setURI(FrequencyClient.this.URI_PROXY);
-				request.setOption(FrequencyClient.this.proxyUri);
+				request.setURI(FrequencyClient.this.proxyUri);
+				request.setOption(FrequencyClient.this.proxyUriOption);
 			} else {
-				request.setURI(FrequencyClient.this.URI);
+				request.setURI(FrequencyClient.this.serverUri);
 			}
 			request.setToken(TokenManager.getInstance().acquireToken());
 			

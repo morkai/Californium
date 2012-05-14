@@ -20,7 +20,15 @@
           </manifest>
           <fileset dir="../bin"/>
       </jar>
-  		
+    	
+        <jar destfile="ExampleProxy.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="ch.ethz.inf.vs.californium.examples.ExampleProxy"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="../bin"/>
+        </jar>
+    	
       <jar destfile="PlugtestServer.jar" filesetmanifest="mergewithoutmain">
           <manifest>
               <attribute name="Main-Class" value="ch.ethz.inf.vs.californium.examples.PlugtestServer"/>

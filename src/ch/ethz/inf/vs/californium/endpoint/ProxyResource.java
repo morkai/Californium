@@ -111,7 +111,7 @@ public class ProxyResource extends LocalResource {
 				request.respond(CodeRegistry.RESP_CONTENT, payload,
 						MediaTypeRegistry.TEXT_PLAIN);
 			} else {
-				// POST and PUT are not allowed
+				// other methods are not allowed
 				request.respond(CodeRegistry.RESP_METHOD_NOT_ALLOWED);
 			}
 		}

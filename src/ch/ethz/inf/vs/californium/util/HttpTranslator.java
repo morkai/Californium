@@ -157,6 +157,7 @@ public class HttpTranslator {
 					// TODO add additional conversions
 					coapRequest.setContentType(contentType);
 					
+					//TODO MediaTypeRegistry.contentNegotiation
 					try {
 						// copy the http entity in the payload of the coap request
 						byte[] payload = EntityUtils.toByteArray(httpEntity);
