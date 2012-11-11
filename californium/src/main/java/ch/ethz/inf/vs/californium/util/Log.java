@@ -103,6 +103,7 @@ public class Log {
 		}
 		
 		// customize levels
+		Logger.getLogger(Log.class.getName()).setLevel(logLevel);
 		Logger.getLogger(Endpoint.class.getName()).setLevel(logLevel);
 		Logger.getLogger(EndpointAddress.class.getName()).setLevel(logLevel);
 		Logger.getLogger(Resource.class.getName()).setLevel(logLevel);
@@ -117,4 +118,3 @@ public class Log {
 		Logger.getLogger(Log.class.getName()).info("==[ START-UP ]========================================================");
 	}
 }
-
