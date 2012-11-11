@@ -68,6 +68,9 @@ public class Request extends Message {
 	/** The list of response handlers that are notified about incoming responses. */
 	private List<ResponseHandler> responseHandlers;
 	
+	/** The list of timeout handlers that are notified about response timeouts. */
+	private List<TimeoutHandler> timeoutHandlers;
+	
 	/** The response queue filled by {@link #receiveResponse()}. */
 	private BlockingQueue<Response> responseQueue;
 	
@@ -323,6 +326,36 @@ public class Request extends Message {
 	}
 
 	/**
+	 * Registers a handler for timeouts of this request.
+	 *
+	 * @param handler the handler to be added
+	 */
+	public void registerTimeoutHandler(TimeoutHandler handler) {
+
+		if (handler != null) {
+
+			if (timeoutHandlers == null) {
+				timeoutHandlers = new ArrayList<TimeoutHandler>();
+			}
+
+			timeoutHandlers.add(handler);
+		}
+	}
+
+	/**
+	 * Unregister timeout handler.
+	 *
+	 * @param handler the handler to be removed
+	 */
+	public void unregisterTimeoutHandler(TimeoutHandler handler) {
+
+		if (handler != null && timeoutHandlers != null) {
+
+			timeoutHandlers.remove(handler);
+		}
+	}
+
+	/**
 	 * Enables or disables the response queue
 	 * 
 	 * NOTE: The response queue needs to be enabled BEFORE any possible calls to
@@ -415,6 +448,13 @@ public class Request extends Message {
 	public void handleTimeout() {
 		if (responseQueueEnabled()) {
 			responseQueue.offer(TIMEOUT_RESPONSE);
+		}
+
+		// notify timeout handlers
+		if (timeoutHandlers != null) {
+			for (TimeoutHandler handler : timeoutHandlers) {
+				handler.handleTimeout(this);
+			}
 		}
 	}
 	
